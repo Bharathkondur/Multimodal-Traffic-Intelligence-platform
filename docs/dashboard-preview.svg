@@ -1,0 +1,372 @@
+<svg width="1100" height="640" viewBox="0 0 1100 640" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI','Helvetica Neue',Arial,sans-serif">
+  <defs>
+    <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#58a6ff" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#58a6ff" stop-opacity="0.02"/>
+    </linearGradient>
+    <clipPath id="videoClip">
+      <rect x="66" y="80" width="588" height="328" rx="3"/>
+    </clipPath>
+  </defs>
+
+  <!-- ═══════════════════════════════ BACKGROUND ═══════════════════════════════ -->
+  <rect width="1100" height="640" fill="#0d1117"/>
+
+  <!-- ═══════════════════════════════ TOP BAR ═══════════════════════════════ -->
+  <rect width="1100" height="44" fill="#161b22"/>
+  <rect y="44" width="1100" height="1" fill="#30363d"/>
+  <!-- Camera icon -->
+  <rect x="12" y="14" width="18" height="14" rx="2.5" fill="none" stroke="#58a6ff" stroke-width="1.5"/>
+  <circle cx="21" cy="21" r="3.5" fill="#58a6ff"/>
+  <path d="M30 15 L36 12 L36 32 L30 29 Z" fill="#58a6ff" opacity="0.7"/>
+  <!-- Title -->
+  <text x="46" y="25" fill="#e6edf3" font-size="13" font-weight="600" letter-spacing="-0.2">Multimodal Traffic Intelligence</text>
+  <text x="46" y="38" fill="#484f58" font-size="10">Real-time Computer Vision + LangGraph AI Reasoning Platform</text>
+  <!-- Session pill -->
+  <rect x="810" y="9" width="220" height="26" rx="5" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+  <text x="822" y="21" fill="#8b949e" font-size="10">sess_4f2a1b  ·  highway_cam_01.mp4</text>
+  <text x="822" y="32" fill="#484f58" font-size="9">00:30:42  ·  44,208 frames processed</text>
+  <!-- Live badge -->
+  <circle cx="1060" cy="22" r="5" fill="#238636" opacity="0.4"/>
+  <circle cx="1060" cy="22" r="3" fill="#3fb950"/>
+  <text x="1070" y="26" fill="#3fb950" font-size="11" font-weight="700">LIVE</text>
+
+  <!-- ═══════════════════════════════ LEFT SIDEBAR ═══════════════════════════════ -->
+  <rect x="0" y="44" width="52" height="596" fill="#161b22"/>
+  <rect x="52" y="44" width="1" height="596" fill="#30363d"/>
+  <!-- Active nav: Dashboard -->
+  <rect x="5" y="54" width="42" height="40" rx="6" fill="#1f6feb" opacity="0.2"/>
+  <rect x="5" y="54" width="3" height="40" rx="1.5" fill="#58a6ff"/>
+  <rect x="17" y="64" width="8" height="8" rx="1.5" fill="#58a6ff"/>
+  <rect x="27" y="64" width="8" height="8" rx="1.5" fill="#58a6ff"/>
+  <rect x="17" y="74" width="8" height="8" rx="1.5" fill="#58a6ff"/>
+  <rect x="27" y="74" width="8" height="8" rx="1.5" fill="#58a6ff"/>
+  <!-- Upload icon -->
+  <rect x="5" y="104" width="42" height="40" rx="6" fill="none"/>
+  <path d="M26 112 L26 130 M20 118 L26 112 L32 118" stroke="#484f58" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="18" y1="132" x2="34" y2="132" stroke="#484f58" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Analytics icon -->
+  <rect x="5" y="154" width="42" height="40" rx="6" fill="none"/>
+  <rect x="15" y="172" width="5" height="13" rx="1.5" fill="#484f58"/>
+  <rect x="23" y="165" width="5" height="20" rx="1.5" fill="#484f58"/>
+  <rect x="31" y="168" width="5" height="17" rx="1.5" fill="#484f58"/>
+  <!-- Incidents icon -->
+  <rect x="5" y="204" width="42" height="40" rx="6" fill="none"/>
+  <path d="M26 210 L18 226 L34 226 Z" stroke="#d29922" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+  <line x1="26" y1="214" x2="26" y2="220" stroke="#d29922" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="26" cy="223" r="1.2" fill="#d29922"/>
+  <!-- Reports icon -->
+  <rect x="5" y="254" width="42" height="40" rx="6" fill="none"/>
+  <rect x="16" y="262" width="20" height="24" rx="2" fill="none" stroke="#484f58" stroke-width="1.5"/>
+  <line x1="20" y1="269" x2="32" y2="269" stroke="#484f58" stroke-width="1" stroke-linecap="round"/>
+  <line x1="20" y1="274" x2="32" y2="274" stroke="#484f58" stroke-width="1" stroke-linecap="round"/>
+  <line x1="20" y1="279" x2="27" y2="279" stroke="#484f58" stroke-width="1" stroke-linecap="round"/>
+
+  <!-- ═══════════════════════════════ VIDEO FEED PANEL ═══════════════════════════════ -->
+  <rect x="58" y="50" width="604" height="368" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <!-- Header -->
+  <text x="70" y="70" fill="#e6edf3" font-size="12" font-weight="600">Live Detection Feed</text>
+  <rect x="474" y="57" width="86" height="17" rx="8" fill="#238636" opacity="0.25"/>
+  <circle cx="485" cy="65" r="3" fill="#3fb950"/>
+  <text x="492" y="69" fill="#3fb950" font-size="10" font-weight="500">Processing</text>
+  <circle cx="624" cy="65" r="2.5" fill="#484f58"/>
+  <circle cx="634" cy="65" r="2.5" fill="#484f58"/>
+  <circle cx="644" cy="65" r="2.5" fill="#484f58"/>
+  <line x1="66" y1="78" x2="654" y2="78" stroke="#30363d" stroke-width="1"/>
+
+  <!-- Video canvas -->
+  <rect x="66" y="80" width="588" height="330" rx="3" fill="#010409"/>
+
+  <!-- Sky -->
+  <rect x="66" y="80" width="588" height="125" fill="#080c14" clip-path="url(#videoClip)"/>
+  <!-- Horizon -->
+  <line x1="66" y1="205" x2="654" y2="205" stroke="#1a2030" stroke-width="1"/>
+  <!-- Road surface -->
+  <rect x="66" y="205" width="588" height="205" fill="#06090f" clip-path="url(#videoClip)"/>
+
+  <!-- Distant buildings silhouette -->
+  <rect x="80"  y="140" width="55" height="65" fill="#0c1520" clip-path="url(#videoClip)"/>
+  <rect x="138" y="158" width="38" height="47" fill="#0c1520" clip-path="url(#videoClip)"/>
+  <rect x="430" y="148" width="62" height="57" fill="#0c1520" clip-path="url(#videoClip)"/>
+  <rect x="496" y="162" width="40" height="43" fill="#0c1520" clip-path="url(#videoClip)"/>
+  <rect x="540" y="152" width="30" height="53" fill="#0c1520" clip-path="url(#videoClip)"/>
+  <!-- Building windows -->
+  <rect x="87"  y="148" width="6" height="5" fill="#1a3050" opacity="0.9"/>
+  <rect x="97"  y="148" width="6" height="5" fill="#2a4a70" opacity="0.9"/>
+  <rect x="87"  y="158" width="6" height="5" fill="#2a4a70" opacity="0.7"/>
+  <rect x="437" y="155" width="6" height="5" fill="#1a3050" opacity="0.9"/>
+  <rect x="449" y="155" width="6" height="5" fill="#2a4a70" opacity="0.9"/>
+  <rect x="503" y="170" width="6" height="5" fill="#2a4a70" opacity="0.7"/>
+
+  <!-- Road perspective lane lines -->
+  <line x1="170" y1="410" x2="275" y2="205" stroke="#212936" stroke-width="1.5" stroke-dasharray="14,10" clip-path="url(#videoClip)"/>
+  <line x1="356" y1="410" x2="350" y2="205" stroke="#212936" stroke-width="1.5" stroke-dasharray="14,10" clip-path="url(#videoClip)"/>
+  <line x1="545" y1="410" x2="424" y2="205" stroke="#212936" stroke-width="1.5" stroke-dasharray="14,10" clip-path="url(#videoClip)"/>
+  <!-- Road edges -->
+  <line x1="66"  y1="410" x2="195" y2="205" stroke="#2d3748" stroke-width="2" clip-path="url(#videoClip)"/>
+  <line x1="654" y1="410" x2="506" y2="205" stroke="#2d3748" stroke-width="2" clip-path="url(#videoClip)"/>
+
+  <!-- ── VEHICLE 1: Car (left lane, foreground) ── -->
+  <rect x="100" y="268" width="140" height="88" fill="none" stroke="#58a6ff" stroke-width="1.8"/>
+  <!-- Corner brackets -->
+  <path d="M100,278 L100,268 L110,268" stroke="#58a6ff" stroke-width="2.5" fill="none"/>
+  <path d="M230,268 L240,268 L240,278" stroke="#58a6ff" stroke-width="2.5" fill="none"/>
+  <path d="M100,346 L100,356 L110,356" stroke="#58a6ff" stroke-width="2.5" fill="none"/>
+  <path d="M240,346 L240,356 L230,356" stroke="#58a6ff" stroke-width="2.5" fill="none"/>
+  <!-- Label -->
+  <rect x="100" y="253" width="108" height="17" rx="3" fill="#58a6ff"/>
+  <text x="105" y="265" fill="white" font-size="10" font-weight="700">car #12   conf: 0.94</text>
+  <!-- Car body -->
+  <rect x="108" y="302" width="124" height="48" rx="6" fill="#141c2e" stroke="#1e2d4a" stroke-width="1"/>
+  <rect x="120" y="286" width="96" height="30" rx="5" fill="#141c2e" stroke="#1e2d4a" stroke-width="1"/>
+  <!-- Windows -->
+  <rect x="126" y="290" width="38" height="22" rx="3" fill="#1a3a60" opacity="0.8"/>
+  <rect x="170" y="290" width="38" height="22" rx="3" fill="#1a3a60" opacity="0.8"/>
+  <!-- Wheels -->
+  <circle cx="130" cy="352" r="9"  fill="#0a0d14" stroke="#2a4a80" stroke-width="1.5"/>
+  <circle cx="130" cy="352" r="4.5" fill="#141c2e"/>
+  <circle cx="210" cy="352" r="9"  fill="#0a0d14" stroke="#2a4a80" stroke-width="1.5"/>
+  <circle cx="210" cy="352" r="4.5" fill="#141c2e"/>
+  <!-- Headlights -->
+  <rect x="108" y="316" width="8" height="6" rx="2" fill="#fffde0" opacity="0.5"/>
+  <rect x="228" y="316" width="8" height="6" rx="2" fill="#fffde0" opacity="0.5"/>
+  <!-- Track ID -->
+  <text x="162" y="325" fill="#58a6ff" font-size="9" opacity="0.7" text-anchor="middle">#12</text>
+  <!-- Tracking trail -->
+  <path d="M170 356 C165 370 160 385 156 408" stroke="#58a6ff" stroke-width="1" fill="none" stroke-dasharray="4,5" opacity="0.35"/>
+
+  <!-- ── VEHICLE 2: Truck (center, larger) ── -->
+  <rect x="342" y="232" width="184" height="122" fill="none" stroke="#58a6ff" stroke-width="1.8"/>
+  <path d="M342,242 L342,232 L352,232" stroke="#58a6ff" stroke-width="2.5" fill="none"/>
+  <path d="M516,232 L526,232 L526,242" stroke="#58a6ff" stroke-width="2.5" fill="none"/>
+  <path d="M342,344 L342,354 L352,354" stroke="#58a6ff" stroke-width="2.5" fill="none"/>
+  <path d="M526,344 L526,354 L516,354" stroke="#58a6ff" stroke-width="2.5" fill="none"/>
+  <rect x="342" y="217" width="116" height="17" rx="3" fill="#58a6ff"/>
+  <text x="347" y="229" fill="white" font-size="10" font-weight="700">truck #7   conf: 0.91</text>
+  <!-- Truck body -->
+  <rect x="350" y="272" width="168" height="80" rx="4" fill="#141c2e" stroke="#1e2d4a" stroke-width="1"/>
+  <!-- Cab -->
+  <rect x="350" y="254" width="64" height="40" rx="4" fill="#141c2e" stroke="#1e2d4a" stroke-width="1"/>
+  <!-- Windshield -->
+  <rect x="355" y="258" width="52" height="28" rx="3" fill="#1a3a60" opacity="0.75"/>
+  <!-- Truck wheels -->
+  <circle cx="372" cy="354" r="10" fill="#0a0d14" stroke="#2a4a80" stroke-width="1.5"/>
+  <circle cx="372" cy="354" r="5"  fill="#141c2e"/>
+  <circle cx="484" cy="354" r="10" fill="#0a0d14" stroke="#2a4a80" stroke-width="1.5"/>
+  <circle cx="484" cy="354" r="5"  fill="#141c2e"/>
+  <text x="434" y="308" fill="#58a6ff" font-size="9" opacity="0.7" text-anchor="middle">#7</text>
+  <path d="M434 354 C432 370 430 388 428 408" stroke="#58a6ff" stroke-width="1" fill="none" stroke-dasharray="4,5" opacity="0.35"/>
+
+  <!-- ── VEHICLE 3: Car (background, distant) ── -->
+  <rect x="240" y="212" width="78" height="48" fill="none" stroke="#58a6ff" stroke-width="1.4" opacity="0.7"/>
+  <rect x="240" y="199" width="86" height="15" rx="3" fill="#58a6ff" opacity="0.7"/>
+  <text x="245" y="211" fill="white" font-size="9" font-weight="600">car #9   0.87</text>
+  <rect x="248" y="222" width="62" height="30" rx="4" fill="#141c2e" opacity="0.9"/>
+  <rect x="255" y="216" width="44" height="18" rx="3" fill="#141c2e" opacity="0.9"/>
+  <rect x="258" y="219" width="18" height="12" rx="2" fill="#1a3a60" opacity="0.6"/>
+  <rect x="280" y="219" width="16" height="12" rx="2" fill="#1a3a60" opacity="0.6"/>
+
+  <!-- ── PEDESTRIAN ── -->
+  <rect x="556" y="268" width="52" height="112" fill="none" stroke="#3fb950" stroke-width="1.8"/>
+  <path d="M556,278 L556,268 L566,268" stroke="#3fb950" stroke-width="2.5" fill="none"/>
+  <path d="M598,268 L608,268 L608,278" stroke="#3fb950" stroke-width="2.5" fill="none"/>
+  <path d="M556,370 L556,380 L566,380" stroke="#3fb950" stroke-width="2.5" fill="none"/>
+  <path d="M608,370 L608,380 L598,380" stroke="#3fb950" stroke-width="2.5" fill="none"/>
+  <rect x="556" y="253" width="100" height="17" rx="3" fill="#3fb950"/>
+  <text x="561" y="265" fill="white" font-size="10" font-weight="700">person #3   0.88</text>
+  <!-- Person silhouette (clipped to box) -->
+  <circle cx="582" cy="290" r="11" fill="#141c2e" stroke="#1e3a20" stroke-width="1" clip-path="url(#videoClip)"/>
+  <rect x="573" y="303" width="18" height="34" rx="5" fill="#141c2e" stroke="#1e3a20" stroke-width="1" clip-path="url(#videoClip)"/>
+  <line x1="570" y1="312" x2="558" y2="328" stroke="#141c2e" stroke-width="5" stroke-linecap="round" clip-path="url(#videoClip)"/>
+  <line x1="594" y1="312" x2="606" y2="328" stroke="#141c2e" stroke-width="5" stroke-linecap="round" clip-path="url(#videoClip)"/>
+  <line x1="576" y1="337" x2="572" y2="375" stroke="#141c2e" stroke-width="5" stroke-linecap="round" clip-path="url(#videoClip)"/>
+  <line x1="588" y1="337" x2="592" y2="375" stroke="#141c2e" stroke-width="5" stroke-linecap="round" clip-path="url(#videoClip)"/>
+  <path d="M582 380 C580 392 578 402 578 408" stroke="#3fb950" stroke-width="1" fill="none" stroke-dasharray="4,5" opacity="0.35"/>
+
+  <!-- Video overlay: FPS -->
+  <rect x="66" y="80" width="78" height="20" fill="#010409" opacity="0.85"/>
+  <circle cx="78" cy="90" r="4" fill="#3fb950" opacity="0.9"/>
+  <text x="86" y="94" fill="#3fb950" font-size="10" font-weight="600">23.8 FPS</text>
+  <!-- Frame counter -->
+  <rect x="574" y="80" width="80" height="20" fill="#010409" opacity="0.85"/>
+  <text x="578" y="94" fill="#8b949e" font-size="10">Frame 18,424</text>
+  <!-- Zone bar -->
+  <rect x="66" y="390" width="588" height="20" fill="#010409" opacity="0.85"/>
+  <rect x="72" y="394" width="10" height="10" fill="none" stroke="#58a6ff" stroke-width="1" opacity="0.8"/>
+  <text x="86" y="403" fill="#58a6ff" font-size="9">Zone A: Entry</text>
+  <rect x="196" y="394" width="10" height="10" fill="none" stroke="#3fb950" stroke-width="1" opacity="0.8"/>
+  <text x="210" y="403" fill="#3fb950" font-size="9">Zone B: Sidewalk</text>
+  <rect x="330" y="394" width="10" height="10" fill="none" stroke="#f85149" stroke-width="1" opacity="0.8"/>
+  <text x="344" y="403" fill="#f85149" font-size="9">Zone C: Incident</text>
+
+  <!-- ═══════════════════════════════ STAT CARDS ═══════════════════════════════ -->
+
+  <!-- Card: Vehicles -->
+  <rect x="668" y="50" width="212" height="86" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <rect x="668" y="50" width="212" height="3" rx="1.5" fill="#58a6ff" opacity="0.7"/>
+  <text x="680" y="70" fill="#8b949e" font-size="10" font-weight="500" letter-spacing="0.5">VEHICLES DETECTED</text>
+  <text x="680" y="106" fill="#e6edf3" font-size="34" font-weight="700">247</text>
+  <text x="736" y="106" fill="#3fb950" font-size="12">↑ +12</text>
+  <text x="680" y="122" fill="#484f58" font-size="10">this session</text>
+
+  <!-- Card: Pedestrians -->
+  <rect x="888" y="50" width="200" height="86" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <rect x="888" y="50" width="200" height="3" rx="1.5" fill="#3fb950" opacity="0.7"/>
+  <text x="900" y="70" fill="#8b949e" font-size="10" font-weight="500" letter-spacing="0.5">PEDESTRIANS</text>
+  <text x="900" y="106" fill="#e6edf3" font-size="34" font-weight="700">43</text>
+  <text x="942" y="106" fill="#8b949e" font-size="12">in session</text>
+  <text x="900" y="122" fill="#484f58" font-size="10">3 active now</text>
+
+  <!-- Card: Incidents -->
+  <rect x="668" y="144" width="212" height="86" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <rect x="668" y="144" width="212" height="3" rx="1.5" fill="#f85149" opacity="0.7"/>
+  <text x="680" y="164" fill="#8b949e" font-size="10" font-weight="500" letter-spacing="0.5">INCIDENTS</text>
+  <text x="680" y="200" fill="#f85149" font-size="34" font-weight="700">3</text>
+  <rect x="726" y="184" width="56" height="18" rx="9" fill="#f85149" opacity="0.18"/>
+  <text x="734" y="197" fill="#f85149" font-size="10" font-weight="700">1 ACTIVE</text>
+  <text x="680" y="216" fill="#484f58" font-size="10">2 resolved</text>
+
+  <!-- Card: Plates -->
+  <rect x="888" y="144" width="200" height="86" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <rect x="888" y="144" width="200" height="3" rx="1.5" fill="#d29922" opacity="0.7"/>
+  <text x="900" y="164" fill="#8b949e" font-size="10" font-weight="500" letter-spacing="0.5">PLATES READ</text>
+  <text x="900" y="200" fill="#e6edf3" font-size="34" font-weight="700">89</text>
+  <text x="942" y="200" fill="#8b949e" font-size="12">plates</text>
+  <text x="900" y="216" fill="#484f58" font-size="10">94.2% avg confidence</text>
+
+  <!-- ═══════════════════════════════ AI CHAT PANEL ═══════════════════════════════ -->
+  <rect x="668" y="238" width="420" height="180" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text x="680" y="258" fill="#e6edf3" font-size="12" font-weight="600">AI Traffic Assistant</text>
+  <rect x="800" y="245" width="74" height="16" rx="8" fill="#1f6feb" opacity="0.25"/>
+  <text x="808" y="257" fill="#58a6ff" font-size="9" font-weight="500">GPT-4o · RAG</text>
+  <line x1="676" y1="265" x2="1080" y2="265" stroke="#30363d" stroke-width="1"/>
+
+  <!-- User message -->
+  <rect x="770" y="273" width="302" height="38" rx="7" fill="#1f6feb" opacity="0.22"/>
+  <text x="782" y="288" fill="#e6edf3" font-size="11">How many vehicles passed in the</text>
+  <text x="782" y="303" fill="#e6edf3" font-size="11">last 5 minutes?</text>
+  <text x="1038" y="316" fill="#484f58" font-size="9">2m ago</text>
+
+  <!-- Agent response -->
+  <rect x="676" y="319" width="376" height="52" rx="7" fill="#21262d"/>
+  <circle cx="692" cy="332" r="8" fill="#1f6feb" opacity="0.35"/>
+  <text x="689" y="337" fill="#58a6ff" font-size="11" font-weight="700">A</text>
+  <text x="708" y="332" fill="#e6edf3" font-size="11">In the last 5 min, 67 vehicles detected:</text>
+  <text x="708" y="347" fill="#58a6ff" font-size="11">52 cars  ·  11 trucks  ·  4 motorcycles</text>
+  <text x="708" y="362" fill="#484f58" font-size="9">Peak density at -3min  ·  18 vehicles/min</text>
+
+  <!-- Input -->
+  <rect x="676" y="379" width="344" height="30" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+  <text x="688" y="398" fill="#484f58" font-size="11">Ask about traffic patterns, incidents...</text>
+  <rect x="1028" y="379" width="58" height="30" rx="6" fill="#1f6feb"/>
+  <text x="1043" y="398" fill="white" font-size="11" font-weight="600">Ask</text>
+
+  <!-- ═══════════════════════════════ CHART ═══════════════════════════════ -->
+  <rect x="58" y="426" width="604" height="202" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text x="70" y="446" fill="#e6edf3" font-size="12" font-weight="600">Vehicle Flow — Last 30 Minutes</text>
+  <!-- Legend -->
+  <line x1="530" y1="442" x2="548" y2="442" stroke="#58a6ff" stroke-width="2"/>
+  <circle cx="539" cy="442" r="3" fill="#58a6ff"/>
+  <text x="553" y="446" fill="#8b949e" font-size="10">vehicles/min</text>
+  <line x1="66" y1="454" x2="654" y2="454" stroke="#30363d" stroke-width="1"/>
+
+  <!-- Chart area -->
+  <rect x="76" y="462" width="572" height="148" rx="3" fill="#0d1117"/>
+
+  <!-- Horizontal grid -->
+  <line x1="100" y1="499" x2="640" y2="499" stroke="#1c2030" stroke-width="1"/>
+  <line x1="100" y1="536" x2="640" y2="536" stroke="#1c2030" stroke-width="1"/>
+  <line x1="100" y1="573" x2="640" y2="573" stroke="#1c2030" stroke-width="1"/>
+  <line x1="100" y1="610" x2="640" y2="610" stroke="#1c2030" stroke-width="1"/>
+
+  <!-- Y-axis labels -->
+  <text x="78" y="466" fill="#484f58" font-size="9">20</text>
+  <text x="78" y="503" fill="#484f58" font-size="9">15</text>
+  <text x="78" y="540" fill="#484f58" font-size="9">10</text>
+  <text x="78" y="577" fill="#484f58" font-size="9">5</text>
+  <text x="78" y="614" fill="#484f58" font-size="9">0</text>
+
+  <!-- Area fill (counts: 8,10,12,11,14,16,13,15,18,12,10,13,15,14,16,18,17,14,12,13,15,14,13,15,17,16,14,12,13,14) -->
+  <!-- x: 100..640 step 18.6 | y = 610 - count*7.4 | baseline y=610 -->
+  <path d="
+    M100,551 L119,536 L137,521 L156,529 L174,507 L193,492 L211,514 L230,499 L248,477
+    L267,521 L285,536 L304,514 L322,499 L341,507 L360,492 L378,477 L397,484 L415,507
+    L434,521 L452,514 L471,499 L490,507 L508,514 L527,499 L545,484 L564,492 L582,507
+    L601,521 L620,514 L640,507
+    L640,610 L100,610 Z"
+    fill="url(#chartFill)"/>
+  <path d="
+    M100,551 L119,536 L137,521 L156,529 L174,507 L193,492 L211,514 L230,499 L248,477
+    L267,521 L285,536 L304,514 L322,499 L341,507 L360,492 L378,477 L397,484 L415,507
+    L434,521 L452,514 L471,499 L490,507 L508,514 L527,499 L545,484 L564,492 L582,507
+    L601,521 L620,514 L640,507"
+    stroke="#58a6ff" stroke-width="2" fill="none" stroke-linejoin="round"/>
+
+  <!-- Peak dots -->
+  <circle cx="248" cy="477" r="4" fill="#58a6ff"/>
+  <circle cx="378" cy="477" r="4" fill="#58a6ff"/>
+  <!-- Live dot -->
+  <circle cx="640" cy="507" r="4.5" fill="#58a6ff"/>
+  <circle cx="640" cy="507" r="9" fill="#58a6ff" opacity="0.15"/>
+
+  <!-- Incident marker line -->
+  <line x1="248" y1="462" x2="248" y2="610" stroke="#f85149" stroke-width="1" stroke-dasharray="4,4" opacity="0.5"/>
+  <text x="244" y="472" fill="#f85149" font-size="11">⚠</text>
+
+  <!-- X-axis labels -->
+  <text x="96"  y="620" fill="#484f58" font-size="9">-30m</text>
+  <text x="172" y="620" fill="#484f58" font-size="9">-25m</text>
+  <text x="248" y="620" fill="#f85149" font-size="9">-20m</text>
+  <text x="341" y="620" fill="#484f58" font-size="9">-15m</text>
+  <text x="434" y="620" fill="#484f58" font-size="9">-10m</text>
+  <text x="527" y="620" fill="#484f58" font-size="9">-5m</text>
+  <text x="626" y="620" fill="#58a6ff" font-size="9">now</text>
+
+  <!-- ═══════════════════════════════ INCIDENT LOG ═══════════════════════════════ -->
+  <rect x="668" y="426" width="420" height="202" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text x="680" y="446" fill="#e6edf3" font-size="12" font-weight="600">Incident Log</text>
+  <rect x="1048" y="432" width="30" height="18" rx="9" fill="#f85149" opacity="0.2"/>
+  <text x="1058" y="445" fill="#f85149" font-size="10" font-weight="700">3</text>
+  <line x1="676" y1="454" x2="1080" y2="454" stroke="#30363d" stroke-width="1"/>
+
+  <!-- Incident 1: ACTIVE -->
+  <rect x="676" y="462" width="404" height="50" rx="6" fill="#21262d" stroke="#f85149" stroke-width="0.8" opacity="0.9"/>
+  <rect x="676" y="462" width="4" height="50" rx="2" fill="#f85149"/>
+  <circle cx="692" cy="479" r="5" fill="#f85149" opacity="0.2"/>
+  <circle cx="692" cy="479" r="3" fill="#f85149"/>
+  <text x="704" y="479" fill="#f85149" font-size="11" font-weight="600">Stopped Vehicle Detected</text>
+  <rect x="1006" y="463" width="68" height="17" rx="8" fill="#f85149" opacity="0.18"/>
+  <text x="1016" y="475" fill="#f85149" font-size="9" font-weight="700">● ACTIVE</text>
+  <text x="704" y="497" fill="#8b949e" font-size="10">Lane 2  ·  Object #7 stationary &gt;30s  ·  Frame 18,424</text>
+  <text x="1010" y="505" fill="#484f58" font-size="9">just now</text>
+
+  <!-- Incident 2: Congestion -->
+  <rect x="676" y="520" width="404" height="44" rx="6" fill="#21262d"/>
+  <rect x="676" y="520" width="4" height="44" rx="2" fill="#d29922"/>
+  <text x="692" y="537" fill="#d29922" font-size="11" font-weight="600">Traffic Congestion</text>
+  <text x="692" y="553" fill="#8b949e" font-size="10">Intersection zone  ·  8 vehicles queued  ·  peak density reached</text>
+  <text x="1016" y="553" fill="#484f58" font-size="9">14m ago</text>
+
+  <!-- Incident 3: Resolved -->
+  <rect x="676" y="572" width="404" height="44" rx="6" fill="#21262d"/>
+  <rect x="676" y="572" width="4" height="44" rx="2" fill="#484f58"/>
+  <text x="692" y="589" fill="#8b949e" font-size="11" font-weight="500">Crowd Formation</text>
+  <rect x="984" y="574" width="88" height="17" rx="8" fill="#484f58" opacity="0.18"/>
+  <text x="994" y="586" fill="#8b949e" font-size="9">✓ RESOLVED</text>
+  <text x="692" y="605" fill="#484f58" font-size="10">Pedestrian zone  ·  12 persons  ·  sidewalk area</text>
+  <text x="1020" y="605" fill="#484f58" font-size="9">22m ago</text>
+
+  <!-- ═══════════════════════════════ STATUS BAR ═══════════════════════════════ -->
+  <rect x="0" y="630" width="1100" height="10" fill="#161b22"/>
+  <rect x="0" y="630" width="1100" height="1" fill="#30363d"/>
+  <circle cx="60"  cy="635" r="2.5" fill="#3fb950"/>
+  <text x="66"  y="639" fill="#484f58" font-size="8">PostgreSQL</text>
+  <circle cx="118" cy="635" r="2.5" fill="#3fb950"/>
+  <text x="124" cy="635" y="639" fill="#484f58" font-size="8">Redis</text>
+  <circle cx="154" cy="635" r="2.5" fill="#3fb950"/>
+  <text x="160" y="639" fill="#484f58" font-size="8">WebSocket</text>
+  <circle cx="212" cy="635" r="2.5" fill="#3fb950"/>
+  <text x="218" y="639" fill="#484f58" font-size="8">AI Agent</text>
+  <text x="820" y="639" fill="#484f58" font-size="8">YOLOv8n · DeepSORT · LangGraph · FastAPI · React 18 · Docker</text>
+
+</svg>

@@ -5,6 +5,10 @@
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-brightgreen.svg)](https://www.docker.com/)
 
+## Dashboard Preview
+
+![Multimodal Traffic Intelligence Dashboard](docs/dashboard-preview.svg)
+
 ## Overview
 
 The Multimodal Traffic Intelligence Platform is a real-time intelligent video analysis system that goes beyond detection. It combines computer vision and natural language reasoning to understand traffic scenes at scale.
