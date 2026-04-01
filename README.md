@@ -1,6 +1,6 @@
 # Multimodal Traffic Intelligence Platform
 
-[![Build Status](https://github.com/traffic-intelligence/platform/actions/workflows/ci.yml/badge.svg)](https://github.com/traffic-intelligence/platform/actions)
+[![Build Status](https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-brightgreen.svg)](https://www.docker.com/)
@@ -250,8 +250,8 @@ Analytics & Monitoring
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/traffic-intelligence/platform.git
-cd "Multimodal Traffic Intelligence platform"
+git clone https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform.git
+cd "Multimodal-Traffic-Intelligence-platform"
 ```
 
 2. Set up environment:
@@ -554,8 +554,8 @@ See `.env.example` for complete reference.
 
 1. Clone and navigate to project:
 ```bash
-git clone https://github.com/traffic-intelligence/platform.git
-cd "Multimodal Traffic Intelligence platform"
+git clone https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform.git
+cd "Multimodal-Traffic-Intelligence-platform"
 ```
 
 2. Create virtual environment:
@@ -734,9 +734,8 @@ MIT License - see LICENSE file for details
 
 ## Support & Community
 
-- **Issues**: [GitHub Issues](https://github.com/traffic-intelligence/platform/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/traffic-intelligence/platform/discussions)
-- **Documentation**: [ReadTheDocs](https://traffic-intelligence.readthedocs.io)
+- **Issues**: [GitHub Issues](https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform/discussions)
 
 ## Acknowledgments
 
