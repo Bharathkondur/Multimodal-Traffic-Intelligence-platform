@@ -1,0 +1,258 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+.npm
+
+# Build output
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.env.local
+.env.*.local
+
+# Docker
+docker-compose.override.yml
+
+# Database
+*.sqlite
+*.sqlite3
+postgres_data/
+
+# Uploads
+uploads/
+!uploads/.gitkeep
+
+# Models
+models/
+!models/.gitkeep
+
+# Temporary files
+*.tmp
+.tmp/
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+
+# IDE specific files
+.editorconfig
+.eslintcache
+.stylelintcache
+
+# Generated files
+generated/
+dist/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Environment files (except example)
+.env
+.env.*.local
+.env.local
+
+# Miscellaneous
+.cache/
+.vscode/
+.idea/
+*.iml
+
+# ===== SECURITY: NEVER COMMIT THESE =====
+
+# All .env variants (only .env.example is safe)
+.env
+.env.*
+!.env.example
+
+# API keys and credentials
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+service-account*.json
+
+# YOLOv8 / ML model weights (large binary, download on demand)
+*.pt
+*.onnx
+*.engine
+*.trt
+*.weights
+backend/models/*.pt
+
+# EasyOCR model cache
+.EasyOCR/
+
+# Uploaded traffic videos (can be large + contain PII)
+uploads/
+!uploads/.gitkeep
+
+# PostgreSQL / Redis data volumes
+postgres_data/
+redis_data/
+pgdata/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Grafana local data
+grafana/data/
+
+# Alembic generated migrations (generated per environment)
+backend/alembic/versions/*.py
+!backend/alembic/versions/.gitkeep
+
+# Pytest / coverage artifacts
+.pytest_cache/
+htmlcov/
+.coverage
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# Windows
+Thumbs.db
+desktop.ini

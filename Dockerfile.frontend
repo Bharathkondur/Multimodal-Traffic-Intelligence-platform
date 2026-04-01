@@ -1,0 +1,48 @@
+# Multi-stage build for frontend service
+FROM node:20-alpine as builder
+
+WORKDIR /app
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies with clean cache
+RUN npm ci --prefer-offline --no-audit
+
+# Copy frontend source
+COPY frontend/src ./src
+COPY frontend/public ./public
+COPY frontend/index.html ./
+COPY frontend/tsconfig.json ./
+COPY frontend/vite.config.ts ./
+
+# Build React application
+RUN npm run build
+
+# Stage 2: Serve with Nginx
+FROM nginx:alpine
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Copy custom nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Remove default nginx configs
+RUN rm -f /etc/nginx/conf.d/default.conf
+
+# Create health check endpoint
+RUN mkdir -p /usr/share/nginx/html && \
+    echo '{"status":"ok"}' > /usr/share/nginx/html/health
+
+# Copy built React app
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+# Health check for Nginx
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+# Start Nginx with proper daemon configuration
+CMD ["nginx", "-g", "daemon off;"]

@@ -1,0 +1,221 @@
+TRAFFIC INTELLIGENCE PLATFORM - FRONTEND
+Complete File Structure and Summary
+
+ROOT CONFIGURATION FILES:
+  package.json                 - npm dependencies and scripts
+  vite.config.js              - Vite build configuration with API proxy
+  tailwind.config.js          - Tailwind CSS theme configuration
+  postcss.config.js           - PostCSS plugin configuration
+  .eslintrc.cjs               - ESLint code quality rules
+  .gitignore                  - Git ignore patterns
+  .env.example                - Environment variables template
+  index.html                  - HTML entry point
+  README.md                   - Project overview and features
+  SETUP.md                    - Installation and development guide
+  FILE_STRUCTURE.txt          - This file
+
+SRC DIRECTORY:
+  src/
+    index.jsx                 - React app entry point
+    index.css                 - Tailwind imports + custom styles
+    App.jsx                   - Main app component with routing
+
+COMPONENTS (src/components/):
+  Dashboard.jsx               - Main dashboard layout with grid system
+  VideoFeed.jsx               - Video player with canvas overlay
+  DetectionOverlay.jsx        - SVG-based detection visualization
+  ChatPanel.jsx               - AI chat interface with suggestions
+  MetricsPanel.jsx            - Real-time metrics and charts (Recharts)
+  IncidentLog.jsx             - Incident feed with filtering
+  UploadPanel.jsx             - Video/RTSP/webcam upload interface
+  Sidebar.jsx                 - Navigation sidebar with theme toggle
+  ReportView.jsx              - Report generation and export
+
+HOOKS (src/hooks/):
+  useWebSocket.js             - WebSocket connection management
+  useDetections.js            - Detection state and aggregation
+
+SERVICES (src/services/):
+  api.js                      - Axios API client with all endpoints
+
+TOTAL FILES: 22
+TOTAL LINES OF CODE: ~2,500+
+
+KEY FEATURES:
+✓ Real-time video streaming with detection overlay
+✓ WebSocket-based live updates with auto-reconnect
+✓ Vehicle detection with color-coded bounding boxes
+✓ Track ID and confidence score display
+✓ Trajectory visualization with trail effects
+✓ Real-time metrics with Recharts visualizations
+✓ Vehicle count bar charts
+✓ Detection timeline line charts
+✓ Confidence distribution pie charts
+✓ FPS and latency monitoring
+✓ AI chat panel with suggested queries
+✓ Incident log with severity filtering
+✓ Report generation and export
+✓ File upload with drag & drop
+✓ RTSP stream URL input
+✓ Webcam selection
+✓ Dark theme (professional control room)
+✓ Responsive design (mobile, tablet, desktop)
+✓ Mobile-friendly navigation
+✓ Theme toggle (dark/light mode)
+✓ Error handling and loading states
+✓ API error interceptors
+✓ Auto-reconnect logic for WebSocket
+✓ Local storage session persistence
+
+DEPENDENCIES:
+Core:
+  - react 18.2.0
+  - react-dom 18.2.0
+  - react-router-dom 6.20.0
+
+Data Visualization:
+  - recharts 2.10.3
+
+UI:
+  - lucide-react 0.293.0
+  - tailwindcss 3.3.6
+
+HTTP:
+  - axios 1.6.2
+
+Build:
+  - vite 5.0.8
+  - @vitejs/plugin-react 4.2.1
+
+CSS:
+  - postcss 8.4.32
+  - autoprefixer 10.4.16
+
+API ENDPOINTS CONFIGURED:
+Session Management:
+  POST   /api/sessions
+  GET    /api/sessions
+  GET    /api/sessions/{id}
+  DELETE /api/sessions/{id}
+
+Video/Stream:
+  POST   /api/sessions/upload
+  POST   /api/sessions/{id}/stream
+  POST   /api/sessions/{id}/stop
+
+Detection:
+  GET    /api/sessions/{id}/detections
+  GET    /api/sessions/{id}/detections/stats
+
+Incidents:
+  GET    /api/sessions/{id}/incidents
+  GET    /api/sessions/{id}/incidents/stats
+
+Metrics:
+  GET    /api/sessions/{id}/metrics
+  GET    /api/sessions/{id}/metrics/history
+
+Chat/AI:
+  POST   /api/sessions/{id}/chat
+  GET    /api/sessions/{id}/chat/history
+
+Reports:
+  POST   /api/sessions/{id}/report
+  GET    /api/sessions/{id}/reports
+  GET    /api/reports/{id}/download
+
+System:
+  GET    /api/health
+  GET    /api/config
+  PUT    /api/config
+
+WEBSOCKET MESSAGES:
+Incoming Message Types:
+  - detection: Vehicle detections with bounding boxes
+  - incident: Incident alerts
+  - metrics: FPS, latency, performance data
+  - frame: Video frame data (base64)
+
+Outgoing Message Types:
+  - subscribe: Subscribe to channel
+  - unsubscribe: Unsubscribe from channel
+  - request: Custom data requests
+
+STYLING SYSTEM:
+Tailwind Classes:
+  .card                 - Card container
+  .card-header          - Card title section
+  .card-title           - Title styling
+  .card-subtitle        - Subtitle styling
+  .btn, .btn-primary    - Button styles
+  .badge, .badge-*      - Badge indicators
+  .input                - Form inputs
+  .grid-responsive      - Responsive grid
+  .video-container      - Video wrapper
+  .message, .message-*  - Chat messages
+  .chart-container      - Chart wrapper
+  .severity-*           - Incident severity colors
+  .vehicle-*            - Vehicle type colors
+  .status-indicator     - Status badges
+  .metric-card          - Metric display cards
+
+Custom Animations:
+  fade-in               - Fade in effect
+  pulse-red             - Red pulsing effect
+  animate-pulse         - Standard pulse
+  animate-blink         - Blinking effect
+
+COLOR SCHEME (Dark Theme):
+  Primary:   #0066cc (Blue)
+  Secondary: #1e40af (Dark Blue)
+  Accent:    #f59e0b (Amber)
+  Success:   #10b981 (Green)
+  Warning:   #f59e0b (Amber)
+  Danger:    #ef4444 (Red)
+  Dark BG:   #0f172a (Almost Black)
+
+VEHICLE TYPE COLORS:
+  Car:       #3b82f6 (Blue)
+  Truck:     #ef4444 (Red)
+  Bus:       #f59e0b (Amber)
+  Motorcycle:#8b5cf6 (Violet)
+  Bicycle:   #10b981 (Green)
+  Pedestrian:#ec4899 (Pink)
+
+QUICK START:
+1. npm install
+2. npm run dev
+3. Visit http://localhost:5173
+4. Upload video or connect RTSP stream
+5. Watch real-time analysis
+
+PRODUCTION BUILD:
+npm run build        # Creates optimized dist/ folder
+npm run preview      # Test production build locally
+
+ENVIRONMENT VARIABLES:
+VITE_API_URL=http://localhost:8000/api
+VITE_WS_URL=ws://localhost:8000/ws
+
+RESPONSIVE BREAKPOINTS:
+- Mobile:  < 768px (md)
+- Tablet:  768px - 1024px (lg)
+- Desktop: 1024px+ (xl)
+
+BROWSER SUPPORT:
+- Chrome/Edge 90+
+- Firefox 88+
+- Safari 14+
+
+NOTES:
+- All components are functional React with hooks
+- WebSocket auto-reconnects with exponential backoff
+- Detections stored in local component state
+- Charts lazy-load for performance
+- Canvas used for video rendering
+- SVG used for detection overlays
+- Dark mode is default
+- Mobile menu collapses to hamburger
+- Session ID stored in localStorage
+- API errors handled gracefully
+- Loading states on all async operations

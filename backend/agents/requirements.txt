@@ -1,0 +1,28 @@
+# Core LangGraph and LangChain dependencies
+langgraph>=0.0.1
+langchain-core>=0.1.0
+langchain>=0.1.0
+
+# LLM Integrations (install as needed)
+langchain-openai>=0.0.1  # For OpenAI GPT-4o support
+langchain-ollama>=0.0.1  # For local Ollama support
+
+# Embeddings and vector operations
+numpy>=1.24.0
+
+# Optional but recommended
+faiss-cpu>=1.7.0  # For production FAISS support (or faiss-gpu)
+
+# Async support
+aiohttp>=3.8.0
+
+# Utilities
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+
+# Type checking and linting (development)
+mypy>=1.0.0
+black>=23.0.0
+ruff>=0.1.0
+pytest>=7.0.0
+pytest-asyncio>=0.21.0

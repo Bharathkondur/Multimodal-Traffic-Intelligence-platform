@@ -1,0 +1,108 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.env.local
+.env.*.local
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+Dockerfile*
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# Environment
+.env
+.env.example
+
+# Temporary files
+*.tmp
+*.log
+.tmp/
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+Thumbs.db
+
+# Upload directories
+uploads/*
+!uploads/.gitkeep
+
+# Model cache
+models/*
+!models/.gitkeep
+
+# Database
+*.sqlite
+*.sqlite3
+postgres_data/
+
+# Test
+test_results/
+htmlcov/
+.coverage

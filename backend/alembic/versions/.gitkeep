@@ -1,0 +1,3 @@
+# Alembic migration files will be generated here.
+# This directory contains auto-generated database schema migration scripts.
+# When running "alembic revision --autogenerate", new migration files will be created here.

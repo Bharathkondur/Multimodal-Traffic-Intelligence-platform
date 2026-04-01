@@ -1,0 +1,102 @@
+version: '3.9'
+
+# Development overrides for docker-compose.yml
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      target: runtime
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - DEBUG=True
+    volumes:
+      - ./backend:/app/backend
+    ports:
+      - "8000:8000"
+    command: >
+      bash -c "pip install -e . && uvicorn app.main:app
+      --host 0.0.0.0 --port 8000 --reload"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    ports:
+      - "3000:3000"
+    command: npm run dev
+
+  postgres:
+    environment:
+      - POSTGRES_LOG_STATEMENT=all
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+    command: redis-server --loglevel debug
+
+  grafana:
+    environment:
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_SECURITY_COOKIE_SAMESITE=Lax
+    ports:
+      - "3001:3000"
+
+  # Hot-reload development service for backend
+  backend-watch:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend:/app/backend
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - DATABASE_URL=postgresql://traffic_admin:secure_password_change_me@postgres:5432/traffic_intelligence
+      - REDIS_URL=redis://redis:6379/0
+    command: bash -c "pip install -e . && python -m watchdog app"
+    networks:
+      - traffic-net
+
+  # Redis Commander for debugging
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - traffic-net
+
+  # pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@traffic.local
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION=False
+      - PGADMIN_CONFIG_COOKIE_DEFAULT_SECURE=False
+      - PGADMIN_CONFIG_COOKIE_DEFAULT_SAMESITE=Lax
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - traffic-net
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
+volumes:
+  pgadmin-data:
+    driver: local

@@ -1,0 +1,287 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  @apply antialiased;
+}
+
+html, body {
+  @apply w-full h-full bg-dark-primary text-dark-primary;
+}
+
+body.dark {
+  @apply bg-slate-950 text-slate-100;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-500;
+}
+
+/* Card styles */
+.card {
+  @apply bg-slate-900 border border-slate-800 rounded-lg p-4 shadow-lg;
+}
+
+.card-header {
+  @apply border-b border-slate-800 pb-3 mb-4;
+}
+
+.card-title {
+  @apply text-lg font-semibold text-slate-100;
+}
+
+.card-subtitle {
+  @apply text-sm text-slate-400;
+}
+
+/* Button styles */
+.btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 cursor-pointer;
+}
+
+.btn-primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800;
+}
+
+.btn-secondary {
+  @apply bg-slate-700 text-slate-100 hover:bg-slate-600 active:bg-slate-500;
+}
+
+.btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700 active:bg-red-800;
+}
+
+.btn-sm {
+  @apply px-2 py-1 text-sm;
+}
+
+/* Badge styles */
+.badge {
+  @apply inline-block px-3 py-1 rounded-full text-xs font-medium;
+}
+
+.badge-success {
+  @apply bg-green-900 text-green-200;
+}
+
+.badge-warning {
+  @apply bg-yellow-900 text-yellow-200;
+}
+
+.badge-danger {
+  @apply bg-red-900 text-red-200;
+}
+
+.badge-info {
+  @apply bg-blue-900 text-blue-200;
+}
+
+/* Input styles */
+.input {
+  @apply w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors;
+}
+
+.input:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+/* Grid layouts */
+.grid-responsive {
+  @apply grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+}
+
+/* Animations */
+.fade-in {
+  @apply animate-in fade-in duration-300;
+}
+
+.pulse-red {
+  @apply animate-pulse bg-red-600;
+}
+
+/* Video container */
+.video-container {
+  @apply relative w-full h-full bg-black rounded-lg overflow-hidden;
+}
+
+.video-frame {
+  @apply w-full h-full object-cover;
+}
+
+.video-overlay {
+  @apply absolute inset-0 pointer-events-none;
+}
+
+/* Loading states */
+.loading {
+  @apply inline-flex items-center gap-2;
+}
+
+.loading::after {
+  content: '';
+  @apply w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin;
+}
+
+/* Chart container */
+.chart-container {
+  @apply w-full h-full flex items-center justify-center;
+}
+
+/* Incident severity colors */
+.severity-critical {
+  @apply text-red-400;
+}
+
+.severity-high {
+  @apply text-orange-400;
+}
+
+.severity-medium {
+  @apply text-yellow-400;
+}
+
+.severity-low {
+  @apply text-green-400;
+}
+
+/* Detection boxes for different vehicle types */
+.vehicle-car {
+  stroke: #3b82f6; /* blue */
+}
+
+.vehicle-truck {
+  stroke: #ef4444; /* red */
+}
+
+.vehicle-bus {
+  stroke: #f59e0b; /* amber */
+}
+
+.vehicle-motorcycle {
+  stroke: #8b5cf6; /* violet */
+}
+
+.vehicle-bicycle {
+  stroke: #10b981; /* green */
+}
+
+.vehicle-pedestrian {
+  stroke: #ec4899; /* pink */
+}
+
+/* Trail effect */
+.trail {
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 1;
+  stroke-dasharray: 5, 5;
+}
+
+/* FPS counter */
+.fps-counter {
+  @apply absolute top-4 left-4 bg-slate-900 bg-opacity-80 px-3 py-2 rounded text-sm font-mono text-green-400 border border-green-600;
+}
+
+/* Fullscreen styles */
+.fullscreen-video {
+  @apply fixed inset-0 z-50 bg-black;
+}
+
+/* Responsive panel */
+.panel-mobile {
+  @apply md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-40;
+}
+
+.panel-desktop {
+  @apply hidden md:flex;
+}
+
+/* Message styles */
+.message {
+  @apply mb-4 flex gap-3;
+}
+
+.message-user {
+  @apply justify-end;
+}
+
+.message-ai {
+  @apply justify-start;
+}
+
+.message-bubble {
+  @apply max-w-xs lg:max-w-md rounded-lg px-4 py-2;
+}
+
+.message-bubble-user {
+  @apply bg-blue-600 text-white rounded-br-none;
+}
+
+.message-bubble-ai {
+  @apply bg-slate-800 text-slate-100 border border-slate-700 rounded-bl-none;
+}
+
+/* Drag and drop */
+.drag-over {
+  @apply border-2 border-blue-500 bg-blue-500 bg-opacity-10;
+}
+
+/* Status indicator */
+.status-indicator {
+  @apply inline-flex items-center gap-2;
+}
+
+.status-dot {
+  @apply w-2 h-2 rounded-full;
+}
+
+.status-dot-active {
+  @apply bg-green-500 animate-pulse;
+}
+
+.status-dot-inactive {
+  @apply bg-slate-600;
+}
+
+.status-dot-warning {
+  @apply bg-yellow-500 animate-pulse;
+}
+
+/* Metric cards */
+.metric-card {
+  @apply card text-center;
+}
+
+.metric-value {
+  @apply text-3xl font-bold text-blue-400;
+}
+
+.metric-label {
+  @apply text-sm text-slate-400 mt-2;
+}
+
+/* Tab styles */
+.tab-container {
+  @apply flex gap-2 border-b border-slate-800;
+}
+
+.tab {
+  @apply px-4 py-2 text-slate-400 border-b-2 border-transparent hover:text-slate-200 transition-colors;
+}
+
+.tab-active {
+  @apply text-blue-400 border-b-2 border-blue-500;
+}
