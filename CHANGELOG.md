@@ -9,6 +9,13 @@ All notable changes to the Multimodal Traffic Intelligence Platform are document
 - Export detections to CSV/JSON via dashboard UI
 - Alert webhook integrations (Slack, PagerDuty)
 
+## [1.3.0] - 2026-04-04
+
+### Added
+- `backend/utils/health_check.py`: async health check utilities for PostgreSQL, Redis, and ML model files
+- Checks run concurrently via `asyncio.gather` for fast liveness/readiness probes
+- Returns per-service latency and an overall `healthy` flag suitable for container orchestration
+
 ## [1.2.0] - 2026-03-28
 
 ### Added
