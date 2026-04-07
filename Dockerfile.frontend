@@ -14,6 +14,8 @@ COPY frontend/src ./src
 COPY frontend/public ./public
 COPY frontend/index.html ./
 COPY frontend/vite.config.js ./
+COPY frontend/postcss.config.js ./
+COPY frontend/tailwind.config.js ./
 
 # Build React application
 RUN npm run build

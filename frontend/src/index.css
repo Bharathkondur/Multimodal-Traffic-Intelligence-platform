@@ -106,7 +106,11 @@ body.dark {
 
 /* Animations */
 .fade-in {
-  @apply animate-in fade-in duration-300;
+  @apply opacity-0 animate-pulse;
+  animation: fadeIn 0.3s ease forwards;
+}
+@keyframes fadeIn {
+  to { opacity: 1; }
 }
 
 .pulse-red {
