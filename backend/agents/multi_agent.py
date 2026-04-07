@@ -19,7 +19,7 @@ from enum import Enum
 from typing import Optional, Dict, List, Any, Callable
 
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
-from langchain_core.language_model import BaseLLM
+from langchain_core.language_models import BaseLLM
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.graph import CompiledGraph
 

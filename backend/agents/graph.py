@@ -11,7 +11,7 @@ from enum import Enum
 from dataclasses import dataclass, field
 
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
-from langchain_core.language_model import BaseLLM
+from langchain_core.language_models import BaseLLM
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import StreamWriter
 

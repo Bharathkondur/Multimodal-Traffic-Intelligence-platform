@@ -6,15 +6,14 @@ WORKDIR /app
 # Copy package files
 COPY frontend/package*.json ./
 
-# Install dependencies with clean cache
-RUN npm ci --prefer-offline --no-audit
+# Install dependencies
+RUN npm install --no-audit
 
 # Copy frontend source
 COPY frontend/src ./src
 COPY frontend/public ./public
 COPY frontend/index.html ./
-COPY frontend/tsconfig.json ./
-COPY frontend/vite.config.ts ./
+COPY frontend/vite.config.js ./
 
 # Build React application
 RUN npm run build

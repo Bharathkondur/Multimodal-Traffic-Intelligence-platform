@@ -41,6 +41,10 @@ class SourceType(str, enum.Enum):
     RTSP = "rtsp"
     HTTP_STREAM = "http_stream"
     FILE_UPLOAD = "file_upload"
+    SIMULATOR = "simulator"
+    UPLOAD = "upload"
+    STREAM = "stream"
+    DEMO = "demo"
 
 
 class VehicleType(str, enum.Enum):
@@ -95,6 +99,7 @@ class TrafficSession(Base):
     (video file, live stream, etc.).
     """
 
+    __allow_unmapped__ = True
     __tablename__ = "traffic_sessions"
 
     id = Column(String(36), primary_key=True, doc="Unique session identifier (UUID)")

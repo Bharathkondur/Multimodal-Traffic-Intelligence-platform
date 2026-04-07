@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { AlertCircle, Settings, Grid3x3, List, Navigate } from 'lucide-react'
+import { AlertCircle, Settings, Grid3x3, List, Navigation } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import VideoFeed from './VideoFeed'
 import MetricsPanel from './MetricsPanel'
@@ -140,7 +140,7 @@ const Dashboard = ({ sessionId = null }) => {
             className="btn btn-secondary btn-sm"
             title="Upload video"
           >
-            <Navigate className="w-4 h-4" />
+            <Navigation className="w-4 h-4" />
           </button>
         </div>
       </div>

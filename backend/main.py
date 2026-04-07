@@ -18,6 +18,8 @@ from fastapi.exceptions import RequestValidationError
 
 from config import settings
 from database.connection import AsyncSessionFactory
+from database import queries as db_queries
+from database.models import Base
 from models.detection import load_model, get_model
 from models.ocr import load_ocr_model
 from utils.redis_client import init_redis
@@ -75,7 +77,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
                 pool_size=20,
                 max_overflow=10,
             )
-            logger.info("Database factory initialized successfully")
+            db_queries.init_db(app_state.db_factory)
+            # Create all tables if they don't exist
+            async with app_state.db_factory.engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database factory initialized and tables created successfully")
         except Exception as e:
             logger.error(f"Database initialization failed: {e}")
             raise
@@ -94,8 +100,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
             app_state.detection_model = load_model(settings.model_path)
             logger.info("Detection model loaded successfully")
         except Exception as e:
-            logger.error(f"Detection model loading failed: {e}")
-            raise
+            logger.warning(f"Detection model loading failed: {e}. Detection features will be unavailable.")
 
         # Load OCR model
         try:

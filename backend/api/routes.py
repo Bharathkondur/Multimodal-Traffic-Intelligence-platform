@@ -64,6 +64,7 @@ from agents.langgraph_agent import process_message
 from analytics.zones import ZoneAnalytics, Zone
 from analytics.heatmap import TrafficHeatmap
 from analytics.speed import SpeedEstimator
+from models.detection import get_model
 
 logger = logging.getLogger(__name__)
 
@@ -755,12 +756,11 @@ async def start_demo(
         # Create simulator instance
         _demo_simulator = TrafficSimulator(
             session_id=session["id"],
-            spawn_rate=request.vehicle_spawn_rate,
         )
 
         # Start simulation in background
         background_tasks.add_task(
-            _demo_simulator.run,
+            _demo_simulator.start,
             duration_seconds=request.duration_seconds,
         )
 

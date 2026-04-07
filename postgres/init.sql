@@ -1,6 +1,6 @@
 -- Create extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "postgis";
+-- CREATE EXTENSION IF NOT EXISTS "postgis"; -- requires postgis image
 CREATE EXTENSION IF NOT EXISTS "hstore";
 
 -- Create schemas

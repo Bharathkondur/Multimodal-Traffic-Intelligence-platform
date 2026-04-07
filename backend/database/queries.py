@@ -17,6 +17,7 @@ from sqlalchemy import (
     or_,
     desc,
     asc,
+    text,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +33,27 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Module-level factory — set by main.py at startup
+_factory = None
+
+
+def init_db(factory) -> None:
+    """Set the global AsyncSessionFactory for use by query helpers."""
+    global _factory
+    _factory = factory
+
+
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def _get_db():
+    """Provide a transactional database session from the module-level factory."""
+    if _factory is None:
+        raise RuntimeError("Database factory not initialised. Call init_db() first.")
+    async with _factory.session_context() as db:
+        yield db
 
 
 async def get_detection_summary(
@@ -551,84 +573,82 @@ async def get_session_stats(
 
 
 async def create_session(
-    db: AsyncSession,
-    source_type: str,
-    source_url: str,
+    name: str = "session",
+    session_type: str = "upload",
+    source: str = "",
     metadata: dict = None,
+    # Legacy positional args (kept for internal callers that pass db explicitly)
+    db: AsyncSession = None,
+    source_type: str = None,
+    source_url: str = None,
 ) -> dict:
     """
     Create a new TrafficSession in DB.
 
-    Args:
-        db: AsyncSession for database operations
-        source_type: Type of source (video_stream, video_file, camera_feed, etc.)
-        source_url: URL or path to the source data
-        metadata: Optional metadata dictionary (resolution, fps, codec, etc.)
-
-    Returns:
-        Dictionary with session details including id, status, start_time
-
-    Raises:
-        SQLAlchemyError: If database operation fails
+    Accepts either the simplified interface used by routes.py:
+        create_session(name=..., session_type=..., source=...)
+    or the legacy interface:
+        create_session(db, source_type, source_url, metadata)
     """
-    try:
-        from uuid import uuid4
+    # Normalise kwargs from both calling conventions
+    _source_type = source_type or session_type
+    _source_url = source_url or source
 
-        session_id = str(uuid4())
-        traffic_session = TrafficSession(
-            id=session_id,
-            source_type=source_type,
-            source_url=source_url,
-            status="active",
-            metadata_json=metadata,
-        )
+    from uuid import uuid4
 
-        db.add(traffic_session)
-        await db.commit()
-        await db.refresh(traffic_session)
+    async def _create(db: AsyncSession) -> dict:
+        try:
+            session_id = str(uuid4())
+            traffic_session = TrafficSession(
+                id=session_id,
+                source_type=_source_type,
+                source_url=_source_url,
+                status="active",
+                metadata_json=metadata,
+            )
+            db.add(traffic_session)
+            await db.commit()
+            await db.refresh(traffic_session)
+            logger.info(f"Created traffic session: {session_id}")
+            return {
+                "id": traffic_session.id,
+                "name": name,
+                "status": traffic_session.status.value if hasattr(traffic_session.status, 'value') else traffic_session.status,
+                "source_type": traffic_session.source_type.value if hasattr(traffic_session.source_type, 'value') else traffic_session.source_type,
+                "source_url": traffic_session.source_url,
+                "start_time": traffic_session.start_time,
+                "metadata": traffic_session.metadata_json,
+            }
+        except Exception as e:
+            logger.error(f"Error creating session: {str(e)}")
+            await db.rollback()
+            raise
 
-        logger.info(f"Created traffic session: {session_id}")
-
-        return {
-            "id": traffic_session.id,
-            "status": traffic_session.status.value,
-            "source_type": traffic_session.source_type.value,
-            "source_url": traffic_session.source_url,
-            "start_time": traffic_session.start_time,
-            "metadata": traffic_session.metadata_json,
-        }
-
-    except Exception as e:
-        logger.error(f"Error creating session: {str(e)}")
-        await db.rollback()
-        raise
+    if db is not None:
+        return await _create(db)
+    async with _get_db() as db:
+        return await _create(db)
 
 
-async def count_active_sessions(db: AsyncSession) -> int:
-    """
-    Count sessions with status='active'.
+async def count_active_sessions(db: AsyncSession = None) -> int:
+    """Count sessions with status='active'."""
+    async def _count(db: AsyncSession) -> int:
+        try:
+            query = select(func.count(TrafficSession.id)).where(
+                TrafficSession.status == "active"
+            )
+            result = await db.execute(query)
+            count = result.scalar() or 0
+            logger.debug(f"Active sessions count: {count}")
+            return count
+        except Exception as e:
+            logger.error(f"Error counting active sessions: {str(e)}")
+            raise
 
-    Args:
-        db: AsyncSession for database operations
-
-    Returns:
-        Integer count of active sessions
-
-    Raises:
-        SQLAlchemyError: If database query fails
-    """
-    try:
-        query = select(func.count(TrafficSession.id)).where(
-            TrafficSession.status == "active"
-        )
-        result = await db.execute(query)
-        count = result.scalar() or 0
-        logger.debug(f"Active sessions count: {count}")
-        return count
-
-    except Exception as e:
-        logger.error(f"Error counting active sessions: {str(e)}")
-        raise
+    if db is not None:
+        return await _count(db)
+    async with _get_db() as db:
+        return await _count(db)
 
 
 async def get_detections(
@@ -858,27 +878,21 @@ async def create_report(
         raise
 
 
-async def check_health(db: AsyncSession) -> bool:
-    """
-    Check database connectivity with a simple query.
+async def check_health(db: AsyncSession = None) -> bool:
+    """Check database connectivity with a simple query."""
+    async def _check(db: AsyncSession) -> bool:
+        try:
+            await db.execute(text("SELECT 1"))
+            logger.debug("Database health check passed")
+            return True
+        except Exception as e:
+            logger.error(f"Database health check failed: {str(e)}")
+            return False
 
-    Args:
-        db: AsyncSession for database operations
-
-    Returns:
-        True if database is responsive, False otherwise
-
-    Raises:
-        SQLAlchemyError: If database operation fails critically
-    """
-    try:
-        await db.execute(text("SELECT 1"))
-        logger.debug("Database health check passed")
-        return True
-
-    except Exception as e:
-        logger.error(f"Database health check failed: {str(e)}")
-        return False
+    if db is not None:
+        return await _check(db)
+    async with _get_db() as db:
+        return await _check(db)
 
 
 async def batch_write_detections(
