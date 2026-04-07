@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def _serialise(obj):
-    """Recursively convert numpy/datetime types to JSON-safe Python types."""
+    """Recursively convert numpy/dataclass/datetime types to JSON-safe Python types."""
     try:
         import numpy as np
         if isinstance(obj, (np.integer,)):
@@ -32,10 +32,19 @@ def _serialise(obj):
     if isinstance(obj, datetime):
         return obj.isoformat()
     if isinstance(obj, dict):
-        return {k: _serialise(v) for k, v in obj.items()}
+        return {k: _serialise(v) for k, v in obj.items() if not k.startswith('_')}
     if isinstance(obj, (list, tuple)):
         return [_serialise(v) for v in obj]
-    return obj
+    # Handle dataclasses and objects with __dict__
+    if hasattr(obj, '__dataclass_fields__'):
+        import dataclasses
+        return _serialise({k: v for k, v in dataclasses.asdict(obj).items() if not k.startswith('_')})
+    if hasattr(obj, '__dict__'):
+        return _serialise({k: v for k, v in obj.__dict__.items() if not k.startswith('_')})
+    # Primitives
+    if isinstance(obj, (int, float, str, bool)) or obj is None:
+        return obj
+    return str(obj)
 
 router = APIRouter(tags=["websocket"])
 
@@ -284,14 +293,13 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str) -> None:
                         # Process through agent
                         response = await process_message(
                             session_id=session_id,
-                            user_message=user_message,
-                            include_context=True,
+                            message=user_message,
                         )
 
                         await websocket.send_json(
                             {
                                 "type": "chat_response",
-                                "message": response.get("message", ""),
+                                "message": response.get("response") or response.get("message", ""),
                                 "sources": response.get("sources", []),
                                 "confidence": response.get("confidence", 1.0),
                                 "timestamp": datetime.utcnow().isoformat(),

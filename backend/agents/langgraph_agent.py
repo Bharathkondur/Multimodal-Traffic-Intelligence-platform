@@ -78,10 +78,14 @@ async def process_message(
                 "Failed to initialize agent",
             )
 
-        # Initialize LangGraph agent
+        # Initialize LangGraph agent (use Gemini if available)
         try:
             logger.debug("Initializing TrafficAnalysisGraph")
-            agent = TrafficAnalysisGraph(db_session=db_session)
+            try:
+                from agents.graph import LLMBackend
+                agent = TrafficAnalysisGraph(llm_backend=LLMBackend.GEMINI)
+            except Exception:
+                agent = TrafficAnalysisGraph()
         except Exception as e:
             logger.error(f"Failed to initialize agent: {e}")
             return _fallback_response(session_id, f"Agent initialization error: {e}")
@@ -107,7 +111,7 @@ async def process_message(
         # Process through agent
         try:
             logger.debug("Running agent graph")
-            output = await agent.arun(agent_input)
+            output = await agent.invoke(message)
 
             # Extract response
             if isinstance(output, dict):

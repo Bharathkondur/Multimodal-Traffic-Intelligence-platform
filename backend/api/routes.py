@@ -532,13 +532,12 @@ async def chat_endpoint(request: ChatRequest) -> ChatResponse:
         # Process message through LangGraph agent
         response = await process_message(
             session_id=request.session_id,
-            user_message=request.message,
-            include_context=request.include_context,
+            message=request.message,
         )
 
         return ChatResponse(
             session_id=request.session_id,
-            message=response.get("message", ""),
+            message=response.get("response") or response.get("message", ""),
             sources=response.get("sources", []),
             confidence=response.get("confidence", 1.0),
         )
