@@ -14,6 +14,29 @@ from fastapi.websockets import WebSocket
 
 logger = logging.getLogger(__name__)
 
+
+def _serialise(obj):
+    """Recursively convert numpy/datetime types to JSON-safe Python types."""
+    try:
+        import numpy as np
+        if isinstance(obj, (np.integer,)):
+            return int(obj)
+        if isinstance(obj, (np.floating,)):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, np.bool_):
+            return bool(obj)
+    except ImportError:
+        pass
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, dict):
+        return {k: _serialise(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_serialise(v) for v in obj]
+    return obj
+
 router = APIRouter(tags=["websocket"])
 
 # Connection management
@@ -73,7 +96,7 @@ class ConnectionManager:
 
         message = {
             "type": "detection",
-            "data": detection_data,
+            "data": _serialise(detection_data),
             "timestamp": datetime.utcnow().isoformat(),
         }
 
@@ -102,7 +125,7 @@ class ConnectionManager:
 
         message = {
             "type": "incident",
-            "data": incident_data,
+            "data": _serialise(incident_data),
             "timestamp": datetime.utcnow().isoformat(),
         }
 
@@ -130,7 +153,7 @@ class ConnectionManager:
 
         message = {
             "type": "status",
-            "data": status_data,
+            "data": _serialise(status_data),
             "timestamp": datetime.utcnow().isoformat(),
         }
 

@@ -246,13 +246,14 @@ async def start_stream(
             request.fps,
         )
 
+        now = datetime.utcnow()
         return SessionResponse(
             id=session["id"],
-            name=session["name"],
+            name=session.get("name", session["id"]),
             type="stream",
             status="processing",
-            created_at=datetime.fromisoformat(session["created_at"]),
-            updated_at=datetime.fromisoformat(session["updated_at"]),
+            created_at=now,
+            updated_at=now,
             source=request.stream_url,
         )
 
@@ -278,14 +279,21 @@ async def get_session(session_id: str) -> SessionResponse:
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
+        def _parse_dt(val):
+            if val is None:
+                return datetime.utcnow()
+            if isinstance(val, datetime):
+                return val
+            return datetime.fromisoformat(str(val))
+
         return SessionResponse(
             id=session["id"],
-            name=session["name"],
-            type=session["type"],
+            name=session.get("name", session["id"]),
+            type=session.get("type", session.get("source_type", "upload")),
             status=session["status"],
-            created_at=datetime.fromisoformat(session["created_at"]),
-            updated_at=datetime.fromisoformat(session["updated_at"]),
-            source=session["source"],
+            created_at=_parse_dt(session.get("created_at")),
+            updated_at=_parse_dt(session.get("updated_at")),
+            source=session.get("source") or session.get("source_url"),
             frame_count=session.get("frame_count", 0),
             duration_seconds=session.get("duration_seconds", 0),
             vehicle_count=session.get("vehicle_count", 0),
@@ -473,8 +481,6 @@ async def get_vehicle_counts_endpoint(session_id: str) -> VehicleCountResponse:
     """Get aggregated vehicle counts and statistics."""
     try:
         counts = await get_vehicle_counts(session_id)
-        if not counts:
-            raise HTTPException(status_code=404, detail="Session not found")
 
         return VehicleCountResponse(
             session_id=session_id,

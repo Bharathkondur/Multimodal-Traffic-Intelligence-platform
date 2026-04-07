@@ -143,12 +143,12 @@ async def get_detection_summary(
 
 
 async def get_vehicle_counts(
-    session: AsyncSession,
     session_id: str,
+    session: AsyncSession = None,
     interval: int = 60,
     vehicle_type: Optional[VehicleType] = None,
     direction: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Any]:
     """
     Get aggregated vehicle count statistics by interval.
 
@@ -168,106 +168,139 @@ async def get_vehicle_counts(
     Raises:
         SQLAlchemyError: If database query fails
     """
-    try:
-        query = select(VehicleCount).where(
-            and_(
-                VehicleCount.session_id == session_id,
-                VehicleCount.interval_seconds == interval,
-            )
-        )
-
-        # Apply optional filters
+    async def _run(db: AsyncSession) -> Dict[str, Any]:
+        conditions = [
+            VehicleCount.session_id == session_id,
+            VehicleCount.interval_seconds == interval,
+        ]
         if vehicle_type:
-            query = query.where(VehicleCount.vehicle_type == vehicle_type)
-
+            conditions.append(VehicleCount.vehicle_type == vehicle_type)
         if direction:
-            query = query.where(VehicleCount.direction == direction)
+            conditions.append(VehicleCount.direction == direction)
 
-        query = query.order_by(asc(VehicleCount.timestamp))
-
-        result = await session.execute(query)
+        result = await db.execute(
+            select(VehicleCount).where(and_(*conditions)).order_by(asc(VehicleCount.timestamp))
+        )
         counts = result.scalars().all()
 
-        return [
-            {
-                "timestamp": count.timestamp,
-                "vehicle_type": count.vehicle_type.value,
-                "count": count.count,
-                "direction": count.direction,
-                "interval_seconds": count.interval_seconds,
-            }
-            for count in counts
-        ]
+        by_class: Dict[str, int] = {}
+        by_time_window: Dict[str, int] = {}
+        peak_time = None
+        peak_count = 0
 
+        for c in counts:
+            vt = c.vehicle_type.value if hasattr(c.vehicle_type, "value") else str(c.vehicle_type)
+            by_class[vt] = by_class.get(vt, 0) + c.count
+            ts_key = c.timestamp.isoformat() if c.timestamp else ""
+            by_time_window[ts_key] = by_time_window.get(ts_key, 0) + c.count
+            if by_time_window[ts_key] > peak_count:
+                peak_count = by_time_window[ts_key]
+                peak_time = ts_key
+
+        total = sum(by_class.values())
+        return {
+            "total_vehicles": total,
+            "unique_vehicles": total,
+            "by_class": by_class,
+            "by_time_window": by_time_window,
+            "peak_time": peak_time,
+            "peak_count": peak_count,
+        }
+
+    try:
+        if session is not None:
+            return await _run(session)
+        async with _get_db() as db:
+            return await _run(db)
     except Exception as e:
         logger.error(f"Error getting vehicle counts: {str(e)}")
         raise
 
 
 async def get_incidents(
-    session: AsyncSession,
-    session_id: str,
+    session: AsyncSession = None,
+    session_id: str = None,
     incident_type: Optional[IncidentType] = None,
     severity: Optional[SeverityLevel] = None,
     resolved: Optional[bool] = None,
     limit: int = 1000,
-) -> List[Dict[str, Any]]:
+    # Routes compat kwargs
+    filters: dict = None,
+    page: int = 1,
+    page_size: int = 20,
+):
     """
     Get incident events with optional filtering.
 
-    Retrieves traffic incidents with comprehensive filtering options.
-
-    Args:
-        session: AsyncSession for database queries
-        session_id: Traffic session identifier
-        incident_type: Optional incident type filter
-        severity: Optional severity level filter
-        resolved: Optional resolution status filter (True/False/None for all)
-        limit: Maximum number of results to return
-
-    Returns:
-        List of incident records with all details
-
-    Raises:
-        SQLAlchemyError: If database query fails
+    Returns either List[Dict] or Tuple[List[Dict], int] depending on
+    whether filters/page/page_size kwargs are used (routes convention).
     """
-    try:
-        query = select(IncidentEvent).where(
-            IncidentEvent.session_id == session_id
-        )
+    use_pagination = filters is not None
 
-        # Apply optional filters
+    # Normalise filters dict
+    if filters is not None:
+        session_id = session_id or filters.get("session_id")
+        if severity is None and filters.get("severity"):
+            severity = filters["severity"]
+        if incident_type is None and filters.get("incident_type"):
+            incident_type = filters["incident_type"]
+        limit = page_size
+
+    async def _run(db: AsyncSession):
+        conditions = [IncidentEvent.session_id == session_id]
         if incident_type:
-            query = query.where(IncidentEvent.incident_type == incident_type)
-
+            conditions.append(IncidentEvent.incident_type == incident_type)
         if severity:
-            query = query.where(IncidentEvent.severity == severity)
-
+            conditions.append(IncidentEvent.severity == severity)
         if resolved is not None:
-            query = query.where(IncidentEvent.resolved == resolved)
+            conditions.append(IncidentEvent.resolved == resolved)
 
-        # Order by timestamp descending
-        query = query.order_by(desc(IncidentEvent.timestamp)).limit(limit)
+        count_result = await db.execute(
+            select(func.count(IncidentEvent.id)).where(and_(*conditions))
+        )
+        total = count_result.scalar() or 0
 
-        result = await session.execute(query)
+        skip = (page - 1) * page_size if use_pagination else 0
+        q = (
+            select(IncidentEvent)
+            .where(and_(*conditions))
+            .order_by(desc(IncidentEvent.timestamp))
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await db.execute(q)
         incidents = result.scalars().all()
 
-        return [
-            {
-                "id": incident.id,
-                "timestamp": incident.timestamp,
-                "incident_type": incident.incident_type.value,
-                "severity": incident.severity.value,
-                "location_description": incident.location_description,
-                "bbox": incident.bbox,
-                "related_track_ids": incident.related_track_ids,
-                "resolved": incident.resolved,
-                "resolved_at": incident.resolved_at,
-                "description": incident.description,
-            }
-            for incident in incidents
-        ]
+        rows = []
+        for i in incidents:
+            ts = i.timestamp.isoformat() if i.timestamp else datetime.utcnow().isoformat()
+            rows.append({
+                "id": str(i.id),
+                "session_id": i.session_id,
+                "timestamp": ts,
+                "detected_at": ts,
+                "incident_type": i.incident_type.value if hasattr(i.incident_type, "value") else str(i.incident_type),
+                "severity": i.severity.value if hasattr(i.severity, "value") else str(i.severity),
+                "description": i.description,
+                "location": i.location_description,
+                "location_description": i.location_description,
+                "bbox": i.bbox,
+                "related_detections": i.related_track_ids or [],
+                "related_track_ids": i.related_track_ids,
+                "confidence": 0.8,
+                "resolved": i.resolved,
+                "resolved_at": i.resolved_at,
+                "metadata": {},
+            })
+        return rows, total
 
+    try:
+        if session is not None:
+            rows, total = await _run(session)
+        else:
+            async with _get_db() as db:
+                rows, total = await _run(db)
+        return (rows, total) if use_pagination else rows
     except Exception as e:
         logger.error(f"Error getting incidents: {str(e)}")
         raise
@@ -467,11 +500,19 @@ async def get_session(session_id: str) -> Optional[Dict[str, Any]]:
             row = result.scalar_one_or_none()
             if row is None:
                 return None
+            status_val = row.status.value if hasattr(row.status, "value") else str(row.status)
+            source_type_val = row.source_type.value if hasattr(row.source_type, "value") else str(row.source_type)
+            start_time_str = row.start_time.isoformat() if row.start_time else datetime.utcnow().isoformat()
             return {
                 "id": row.id,
-                "status": row.status.value if hasattr(row.status, "value") else row.status,
-                "source_type": row.source_type.value if hasattr(row.source_type, "value") else row.source_type,
+                "name": row.source_url or f"Session {row.id[:8]}",
+                "type": source_type_val,
+                "status": status_val,
+                "source_type": source_type_val,
                 "source_url": row.source_url,
+                "source": row.source_url,
+                "created_at": start_time_str,
+                "updated_at": start_time_str,
                 "start_time": row.start_time,
                 "metadata": row.metadata_json,
             }
@@ -481,8 +522,8 @@ async def get_session(session_id: str) -> Optional[Dict[str, Any]]:
 
 
 async def get_session_stats(
-    session: AsyncSession,
     session_id: str,
+    session: AsyncSession = None,
 ) -> Dict[str, Any]:
     """
     Get comprehensive statistics for a traffic session.
@@ -506,12 +547,12 @@ async def get_session_stats(
     Raises:
         SQLAlchemyError: If database query fails
     """
-    try:
+    async def _run(db: AsyncSession) -> Dict[str, Any]:
         # Get session info
         session_query = select(TrafficSession).where(
             TrafficSession.id == session_id
         )
-        session_result = await session.execute(session_query)
+        session_result = await db.execute(session_query)
         traffic_session = session_result.scalar_one_or_none()
 
         if not traffic_session:
@@ -519,77 +560,53 @@ async def get_session_stats(
             return {}
 
         # Count detections
-        detection_count_query = select(func.count(DetectionEvent.id)).where(
-            DetectionEvent.session_id == session_id
+        detection_count_result = await db.execute(
+            select(func.count(DetectionEvent.id)).where(
+                DetectionEvent.session_id == session_id
+            )
         )
-        detection_count_result = await session.execute(detection_count_query)
         total_detections = detection_count_result.scalar() or 0
 
         # Count incidents
-        incident_count_query = select(func.count(IncidentEvent.id)).where(
-            IncidentEvent.session_id == session_id
-        )
-        incident_count_result = await session.execute(incident_count_query)
-        total_incidents = incident_count_result.scalar() or 0
-
-        # Count unresolved incidents
-        unresolved_query = select(func.count(IncidentEvent.id)).where(
-            and_(
-                IncidentEvent.session_id == session_id,
-                IncidentEvent.resolved == False,
+        incident_count_result = await db.execute(
+            select(func.count(IncidentEvent.id)).where(
+                IncidentEvent.session_id == session_id
             )
         )
-        unresolved_result = await session.execute(unresolved_query)
-        unresolved_incidents = unresolved_result.scalar() or 0
-
-        # Count unique tracks
-        unique_tracks_query = select(
-            func.count(func.distinct(DetectionEvent.track_id))
-        ).where(DetectionEvent.session_id == session_id)
-        unique_tracks_result = await session.execute(unique_tracks_query)
-        unique_tracks = unique_tracks_result.scalar() or 0
+        total_incidents = incident_count_result.scalar() or 0
 
         # Get average confidence
-        avg_confidence_query = select(
-            func.avg(DetectionEvent.confidence)
-        ).where(DetectionEvent.session_id == session_id)
-        avg_confidence_result = await session.execute(avg_confidence_query)
+        avg_confidence_result = await db.execute(
+            select(func.avg(DetectionEvent.confidence)).where(
+                DetectionEvent.session_id == session_id
+            )
+        )
         avg_confidence = avg_confidence_result.scalar() or 0.0
 
-        # Calculate duration
-        duration = None
-        if traffic_session.end_time:
-            duration = (
-                traffic_session.end_time - traffic_session.start_time
-            ).total_seconds()
-
         return {
+            # Flat keys for routes.py SessionStatsResponse
+            "detections_count": total_detections,
+            "incidents_count": total_incidents,
+            "avg_detection_confidence": float(avg_confidence),
+            "total_frames": 0,
+            "processing_fps": 0.0,
+            # Nested keys for other consumers
             "session_info": {
                 "id": traffic_session.id,
                 "start_time": traffic_session.start_time,
                 "end_time": traffic_session.end_time,
-                "status": traffic_session.status.value,
-                "source_type": traffic_session.source_type.value,
+                "status": traffic_session.status.value if hasattr(traffic_session.status, "value") else traffic_session.status,
+                "source_type": traffic_session.source_type.value if hasattr(traffic_session.source_type, "value") else traffic_session.source_type,
                 "source_url": traffic_session.source_url,
-            },
-            "detection_stats": {
-                "total_detections": total_detections,
-                "unique_tracks": unique_tracks,
-                "avg_confidence": float(avg_confidence),
-            },
-            "incident_stats": {
-                "total_incidents": total_incidents,
-                "unresolved_incidents": unresolved_incidents,
-                "resolved_incidents": total_incidents - unresolved_incidents,
-            },
-            "temporal_info": {
-                "duration_seconds": duration,
-                "start_time": traffic_session.start_time,
-                "end_time": traffic_session.end_time,
             },
             "metadata": traffic_session.metadata_json,
         }
 
+    try:
+        if session is not None:
+            return await _run(session)
+        async with _get_db() as db:
+            return await _run(db)
     except Exception as e:
         logger.error(f"Error getting session stats: {str(e)}")
         raise
@@ -675,128 +692,102 @@ async def count_active_sessions(db: AsyncSession = None) -> int:
 
 
 async def get_detections(
-    db: AsyncSession,
-    session_id: str,
+    db: AsyncSession = None,
+    session_id: str = None,
     skip: int = 0,
     limit: int = 50,
     vehicle_type: str = None,
     min_confidence: float = None,
     start_time=None,
     end_time=None,
+    # Routes compat kwargs
+    filters: dict = None,
+    page: int = 1,
+    page_size: int = 50,
 ) -> tuple[list[dict], int]:
     """
     Get paginated detections with filters.
 
-    Args:
-        db: AsyncSession for database operations
-        session_id: Traffic session identifier
-        skip: Number of records to skip (pagination offset)
-        limit: Maximum number of records to return
-        vehicle_type: Optional vehicle type filter
-        min_confidence: Optional minimum confidence threshold
-        start_time: Optional start timestamp filter
-        end_time: Optional end timestamp filter
+    Supports two calling conventions:
+        Legacy: get_detections(db, session_id, skip, limit, ...)
+        Routes: get_detections(filters={...}, page=N, page_size=N)
 
     Returns:
         Tuple of (list of detection dicts, total count)
-
-    Raises:
-        SQLAlchemyError: If database query fails
     """
-    try:
-        # Build count query
-        count_query = select(func.count(DetectionEvent.id)).where(
-            DetectionEvent.session_id == session_id
-        )
+    # Normalise calling convention
+    if filters is not None:
+        session_id = session_id or filters.get("session_id")
+        if min_confidence is None:
+            min_confidence = filters.get("confidence_min") or filters.get("min_confidence")
+        vehicle_type = vehicle_type or filters.get("vehicle_type") or filters.get("class_name")
+        skip = (page - 1) * page_size
+        limit = page_size
 
-        # Apply filters to count query
+    async def _run(db: AsyncSession) -> tuple[list[dict], int]:
+        base_where = [DetectionEvent.session_id == session_id]
         if vehicle_type:
-            count_query = count_query.where(
-                DetectionEvent.vehicle_type == vehicle_type
-            )
+            base_where.append(DetectionEvent.vehicle_type == vehicle_type)
         if min_confidence is not None:
-            count_query = count_query.where(
-                DetectionEvent.confidence >= min_confidence
-            )
+            base_where.append(DetectionEvent.confidence >= min_confidence)
         if start_time:
-            count_query = count_query.where(
-                DetectionEvent.timestamp >= start_time
-            )
+            base_where.append(DetectionEvent.timestamp >= start_time)
         if end_time:
-            count_query = count_query.where(
-                DetectionEvent.timestamp <= end_time
-            )
+            base_where.append(DetectionEvent.timestamp <= end_time)
 
-        count_result = await db.execute(count_query)
+        count_result = await db.execute(
+            select(func.count(DetectionEvent.id)).where(and_(*base_where))
+        )
         total_count = count_result.scalar() or 0
 
-        # Build data query
-        data_query = select(DetectionEvent).where(
-            DetectionEvent.session_id == session_id
-        )
-
-        # Apply same filters to data query
-        if vehicle_type:
-            data_query = data_query.where(
-                DetectionEvent.vehicle_type == vehicle_type
-            )
-        if min_confidence is not None:
-            data_query = data_query.where(
-                DetectionEvent.confidence >= min_confidence
-            )
-        if start_time:
-            data_query = data_query.where(
-                DetectionEvent.timestamp >= start_time
-            )
-        if end_time:
-            data_query = data_query.where(
-                DetectionEvent.timestamp <= end_time
-            )
-
-        data_query = (
-            data_query.order_by(asc(DetectionEvent.timestamp))
+        data_result = await db.execute(
+            select(DetectionEvent)
+            .where(and_(*base_where))
+            .order_by(asc(DetectionEvent.timestamp))
             .offset(skip)
             .limit(limit)
         )
+        detections = data_result.scalars().all()
 
-        result = await db.execute(data_query)
-        detections = result.scalars().all()
-
-        detections_list = [
-            {
-                "id": d.id,
-                "timestamp": d.timestamp,
-                "frame_number": d.frame_number,
-                "vehicle_type": d.vehicle_type.value,
-                "confidence": float(d.confidence),
+        detections_list = []
+        for d in detections:
+            x = float(d.bbox_x or 0)
+            y = float(d.bbox_y or 0)
+            w = float(d.bbox_w or 0)
+            h = float(d.bbox_h or 0)
+            detections_list.append({
+                "id": str(d.id),
+                "session_id": d.session_id,
+                "frame_number": d.frame_number or 0,
+                "timestamp": d.timestamp.isoformat() if d.timestamp else datetime.utcnow().isoformat(),
+                "class_name": d.vehicle_type.value if hasattr(d.vehicle_type, "value") else str(d.vehicle_type),
+                "vehicle_type": d.vehicle_type.value if hasattr(d.vehicle_type, "value") else str(d.vehicle_type),
+                "confidence": float(d.confidence or 0),
                 "track_id": d.track_id,
-                "bbox": {
-                    "x": float(d.bbox_x),
-                    "y": float(d.bbox_y),
-                    "w": float(d.bbox_w),
-                    "h": float(d.bbox_h),
-                },
+                "bbox": [x, y, x + w, y + h],
+                "center": [x + w / 2, y + h / 2],
+                "area": w * h,
                 "speed_estimate": d.speed_estimate,
                 "direction": d.direction,
-            }
-            for d in detections
-        ]
+            })
 
-        logger.debug(
-            f"Retrieved {len(detections_list)} detections for session {session_id}"
-        )
-
+        logger.debug(f"Retrieved {len(detections_list)} detections for session {session_id}")
         return detections_list, total_count
 
+    try:
+        if db is not None:
+            return await _run(db)
+        async with _get_db() as db:
+            return await _run(db)
     except Exception as e:
         logger.error(f"Error getting detections: {str(e)}")
         raise
 
 
 async def update_session_status(
-    db: AsyncSession,
     session_id: str,
     status: str,
+    db: AsyncSession = None,
 ) -> bool:
     """
     Update session status.
@@ -812,7 +803,7 @@ async def update_session_status(
     Raises:
         SQLAlchemyError: If database operation fails
     """
-    try:
+    async def _run(db: AsyncSession) -> bool:
         query = select(TrafficSession).where(TrafficSession.id == session_id)
         result = await db.execute(query)
         traffic_session = result.scalar_one_or_none()
@@ -822,24 +813,28 @@ async def update_session_status(
             return False
 
         traffic_session.status = status
-        if status == "completed" or status == "failed":
+        if status in ("completed", "failed", "stopped"):
             traffic_session.end_time = datetime.utcnow()
 
         await db.commit()
         logger.info(f"Updated session {session_id} status to {status}")
         return True
 
+    try:
+        if db is not None:
+            return await _run(db)
+        async with _get_db() as db:
+            return await _run(db)
     except Exception as e:
         logger.error(f"Error updating session status: {str(e)}")
-        await db.rollback()
         raise
 
 
 async def create_report(
-    db: AsyncSession,
-    session_id: str,
-    report_type: str,
-    content: str,
+    db: AsyncSession = None,
+    session_id: str = None,
+    report_type: str = "summary",
+    content=None,
     query_text: str = None,
 ) -> dict:
     """
@@ -858,46 +853,47 @@ async def create_report(
     Raises:
         SQLAlchemyError: If database operation fails
     """
-    try:
-        import json
+    import json as _json
 
-        # Ensure content is properly formatted as JSON
-        if isinstance(content, str):
-            try:
-                content_json = json.loads(content)
-            except json.JSONDecodeError:
-                content_json = {"text": content}
-        else:
-            content_json = content
+    if content is None:
+        content_json = {}
+    elif isinstance(content, str):
+        try:
+            content_json = _json.loads(content)
+        except _json.JSONDecodeError:
+            content_json = {"text": content}
+    else:
+        content_json = content
 
+    async def _run(db: AsyncSession) -> dict:
         report = TrafficReport(
             session_id=session_id,
             report_type=report_type,
             content=content_json,
             query_text=query_text,
         )
-
         db.add(report)
         await db.commit()
         await db.refresh(report)
-
-        logger.info(
-            f"Created report {report.id} of type {report_type} "
-            f"for session {session_id}"
-        )
-
+        logger.info(f"Created report {report.id} of type {report_type} for session {session_id}")
+        generated_str = report.generated_at.isoformat() if report.generated_at else datetime.utcnow().isoformat()
         return {
-            "id": report.id,
+            "id": str(report.id),
             "session_id": report.session_id,
             "report_type": report.report_type,
             "content": report.content,
             "query_text": report.query_text,
-            "generated_at": report.generated_at,
+            "generated_at": generated_str,
+            "created_at": generated_str,
         }
 
+    try:
+        if db is not None:
+            return await _run(db)
+        async with _get_db() as db:
+            return await _run(db)
     except Exception as e:
         logger.error(f"Error creating report: {str(e)}")
-        await db.rollback()
         raise
 
 

@@ -83,7 +83,7 @@ export const api = {
 
   // Chat/AI endpoints with session_id in body
   sendMessage: (sessionId, message) =>
-    apiClient.post('/api/chat', { session_id: sessionId, message }),
+    apiClient.post('/chat', { session_id: sessionId, message }),
 
   // Alternative endpoint for chat
   sendChatMessage: (sessionId, message) =>

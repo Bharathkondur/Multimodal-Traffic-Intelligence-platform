@@ -27,6 +27,10 @@ class DetectionClass(str, Enum):
     STOP_SIGN = "stop sign"
     PARKING_METER = "parking meter"
     BENCH = "bench"
+    # DB vehicle types
+    PEDESTRIAN = "pedestrian"
+    VAN = "van"
+    UNKNOWN = "unknown"
 
 
 class IncidentSeverity(str, Enum):
@@ -48,6 +52,13 @@ class IncidentType(str, Enum):
     TRAFFIC_LIGHT_VIOLATION = "traffic_light_violation"
     LANE_VIOLATION = "lane_violation"
     UNUSUAL_ACTIVITY = "unusual_activity"
+    # DB incident types
+    COLLISION = "collision"
+    STALLED_VEHICLE = "stalled_vehicle"
+    HAZARD = "hazard"
+    WEATHER_RELATED = "weather_related"
+    INFRASTRUCTURE_DAMAGE = "infrastructure_damage"
+    OTHER = "other"
 
 
 class DetectionResponse(BaseModel):
@@ -79,8 +90,8 @@ class DetectionResponse(BaseModel):
     center: List[float] = Field(
         ..., min_length=2, max_length=2, description="Center coordinates [x, y]"
     )
-    area: int = Field(..., ge=0, description="Detection area in pixels")
-    track_id: Optional[int] = Field(None, description="Multi-object tracking ID")
+    area: float = Field(..., ge=0, description="Detection area in pixels")
+    track_id: Optional[str] = Field(None, description="Multi-object tracking ID")
 
     model_config = {
         "json_schema_extra": {
@@ -123,15 +134,13 @@ class IncidentResponse(BaseModel):
     session_id: str = Field(..., description="Associated session ID")
     incident_type: IncidentType = Field(..., description="Type of incident")
     severity: IncidentSeverity = Field(..., description="Severity level")
-    description: str = Field(..., max_length=1000, description="Description")
+    description: Optional[str] = Field(None, max_length=1000, description="Description")
     detected_at: datetime = Field(..., description="Detection timestamp")
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score")
-    related_detections: List[str] = Field(
+    confidence: float = Field(default=0.8, ge=0.0, le=1.0, description="Confidence score")
+    related_detections: List[Any] = Field(
         default_factory=list, description="Related detection IDs"
     )
-    location: Optional[Dict[str, float]] = Field(
-        None, description="Location coordinates"
-    )
+    location: Optional[Any] = Field(None, description="Location coordinates")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadata")
 
     model_config = {
@@ -179,7 +188,7 @@ class SessionResponse(BaseModel):
     )
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    source: str = Field(..., description="Source file path or stream URL")
+    source: Optional[str] = Field(None, description="Source file path or stream URL")
     frame_count: int = Field(default=0, ge=0, description="Total frames processed")
     duration_seconds: float = Field(default=0.0, ge=0.0, description="Duration")
     vehicle_count: int = Field(default=0, ge=0, description="Total vehicles detected")
