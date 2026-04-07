@@ -83,7 +83,10 @@ async def process_message(
             logger.debug("Initializing TrafficAnalysisGraph")
             try:
                 from agents.graph import LLMBackend
-                agent = TrafficAnalysisGraph(llm_backend=LLMBackend.GEMINI)
+                agent = TrafficAnalysisGraph(
+                    llm_backend=LLMBackend.GEMINI,
+                    llm_model="gemini-2.5-flash",
+                )
             except Exception:
                 agent = TrafficAnalysisGraph()
         except Exception as e:
