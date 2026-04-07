@@ -457,6 +457,29 @@ async def search_events(
         raise
 
 
+async def get_session(session_id: str) -> Optional[Dict[str, Any]]:
+    """Fetch a single session by ID. Returns None if not found."""
+    async with _get_db() as db:
+        try:
+            result = await db.execute(
+                select(TrafficSession).where(TrafficSession.id == session_id)
+            )
+            row = result.scalar_one_or_none()
+            if row is None:
+                return None
+            return {
+                "id": row.id,
+                "status": row.status.value if hasattr(row.status, "value") else row.status,
+                "source_type": row.source_type.value if hasattr(row.source_type, "value") else row.source_type,
+                "source_url": row.source_url,
+                "start_time": row.start_time,
+                "metadata": row.metadata_json,
+            }
+        except Exception as e:
+            logger.error(f"Error fetching session {session_id}: {e}")
+            return None
+
+
 async def get_session_stats(
     session: AsyncSession,
     session_id: str,

@@ -202,7 +202,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str) -> None:
         WebSocketException: On connection errors
     """
     try:
-        from database import get_session as db_get_session
+        from database.queries import get_session as db_get_session
         from agents.langgraph_agent import process_message
 
         # Verify session exists
@@ -318,7 +318,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str) -> None:
 
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
-        raise WebSocketException(code=status.WS_1011_SERVER_ERROR)
+        raise WebSocketException(code=1011)
 
     finally:
         manager.disconnect(session_id, websocket)
@@ -349,6 +349,11 @@ async def broadcast_incident(session_id: str, incident: Dict) -> None:
         incident: Incident data dictionary
     """
     await manager.broadcast_incident(session_id, incident)
+
+
+async def broadcast_metrics(session_id: str, metrics: Dict) -> None:
+    """Broadcast metrics update to all connected clients."""
+    await manager.broadcast_status(session_id, {"type": "metrics", "data": metrics})
 
 
 async def broadcast_status(session_id: str, status_update: Dict) -> None:

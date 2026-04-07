@@ -74,17 +74,22 @@ async def start_detection_pipeline(
 
         # Import stream processor
         from stream.processor import StreamProcessor, StreamSource, StreamSourceType, ProcessingConfig
+        from detection.detector import VehicleDetector
 
         # Import models
         from models.detection import load_model
 
         # Import database
         from database.connection import AsyncSessionFactory
+        from api.websocket_routes import broadcast_detection, broadcast_incident, broadcast_metrics
 
         # Load YOLOv8 model
         logger.debug(f"Loading YOLOv8 model from {settings.model_path}")
         model = load_model(settings.model_path, device="auto")
         logger.info("YOLOv8 model loaded successfully")
+
+        # Create detector wrapping YOLO model
+        detector = VehicleDetector(model_path=settings.model_path)
 
         # Create stream source for video file
         stream_source = StreamSource(
@@ -97,26 +102,11 @@ async def start_detection_pipeline(
         # Create processing configuration
         processing_config = ProcessingConfig(
             fps=30,
-            target_fps=10,  # Process every 3 frames
+            target_fps=10,
             frame_width=1920,
             frame_height=1080,
-            normalize=True,
-            resize_mode="letterbox",
             batch_size=8,
             queue_size=100,
-            num_workers=4,
-            skip_frames=0,
-            timeout=30.0,
-            batch_db_writes=True,
-            batch_write_interval=5.0,
-            batch_write_size=50,
-        )
-
-        # Create stream processor
-        processor = StreamProcessor(
-            source=stream_source,
-            config=processing_config,
-            session_id=session_id,
         )
 
         # Initialize database session factory
@@ -126,18 +116,39 @@ async def start_detection_pipeline(
             pool_size=5,
         )
 
-        # Initialize database
-        await db_factory.init_models()
+        # Broadcast callbacks
+        async def on_detection(frame_data, detections):
+            await broadcast_detection(session_id, {"detections": detections, "frame_data": frame_data})
+
+        async def on_incident(incident):
+            await broadcast_incident(session_id, incident)
+
+        async def on_metrics(metrics):
+            await broadcast_metrics(session_id, metrics)
+
+        # Create stream processor
+        processor = StreamProcessor(
+            stream_source=stream_source,
+            config=processing_config,
+            detector=detector,
+            db_factory=db_factory,
+            on_detection=on_detection,
+            on_incident=on_incident,
+            on_metrics=on_metrics,
+        )
 
         # Process video frames
         logger.info("Starting frame processing")
-        await processor.process(model=model)
+        await processor.start(session_id=session_id)
+        # Wait for all pipeline tasks to complete
+        if processor._tasks:
+            await asyncio.gather(*processor._tasks, return_exceptions=True)
 
         logger.info(f"Detection pipeline completed for session {session_id}")
 
         # Update session status to completed
         try:
-            async with db_factory.get_session() as db_session:
+            async with db_factory.session_context() as db_session:
                 from database.models import TrafficSession, SessionStatus
                 from sqlalchemy import update
 
@@ -149,13 +160,12 @@ async def start_detection_pipeline(
                     )
                 )
                 await db_session.execute(stmt)
-                await db_session.commit()
                 logger.info(f"Session {session_id} status updated to COMPLETED")
         except Exception as e:
             logger.error(f"Failed to update session status: {e}")
 
         # Close database connections
-        await db_factory.close()
+        await db_factory.dispose()
 
     except Exception as e:
         logger.error(f"Detection pipeline error for session {session_id}: {e}", exc_info=True)
@@ -168,9 +178,8 @@ async def start_detection_pipeline(
                 from sqlalchemy import update
 
                 db_factory = AsyncSessionFactory(database_url=settings.get_database_url())
-                await db_factory.init_models()
 
-                async with db_factory.get_session() as db_session:
+                async with db_factory.session_context() as db_session:
                     stmt = (
                         update(TrafficSession)
                         .where(TrafficSession.id == session_id)
