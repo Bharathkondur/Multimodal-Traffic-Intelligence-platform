@@ -138,16 +138,17 @@ export const useWebSocket = (sessionId, onMessage, options = {}) => {
   }, [send])
 
   const subscribe = useCallback((channel) => {
+    // Backend expects "channels" as an array
     send({
       type: 'subscribe',
-      channel
+      channels: [channel]
     })
   }, [send])
 
   const unsubscribe = useCallback((channel) => {
     send({
       type: 'unsubscribe',
-      channel
+      channels: [channel]
     })
   }, [send])
 

@@ -26,7 +26,7 @@ const DetectionOverlay = ({ detections = [], width = 1280, height = 720 }) => {
     const scaleY = height / 720
 
     detections.forEach((detection) => {
-      const { bbox, type, confidence, track_id, is_incident, trajectory = [] } = detection
+      const { bbox, type, confidence, track_id, is_incident, trajectory = [], plate_number } = detection
 
       if (!bbox || !bbox.length) return
 
@@ -82,8 +82,8 @@ const DetectionOverlay = ({ detections = [], width = 1280, height = 720 }) => {
 
       svg.appendChild(rect)
 
-      // Draw label background
-      const labelText = `${type}: ${(confidence * 100).toFixed(0)}% (${track_id})`
+      // Draw detection label (type + confidence)
+      const labelText = `${type || 'vehicle'}: ${(confidence * 100).toFixed(0)}%${track_id ? ` (${track_id})` : ''}`
       const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text')
       textElement.setAttribute('x', x + 5)
       textElement.setAttribute('y', y - 8)
@@ -93,7 +93,6 @@ const DetectionOverlay = ({ detections = [], width = 1280, height = 720 }) => {
       textElement.setAttribute('font-family', 'monospace')
       textElement.textContent = labelText
 
-      // Background rect for text
       const textBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
       const textWidth = labelText.length * 6
       textBg.setAttribute('x', x)
@@ -106,6 +105,31 @@ const DetectionOverlay = ({ detections = [], width = 1280, height = 720 }) => {
 
       svg.appendChild(textBg)
       svg.appendChild(textElement)
+
+      // Draw license plate label below the bounding box if OCR found one
+      if (plate_number) {
+        const plateText = `🔤 ${plate_number}`
+        const plateEl = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        plateEl.setAttribute('x', x + 5)
+        plateEl.setAttribute('y', y + h + 14)
+        plateEl.setAttribute('font-size', '12')
+        plateEl.setAttribute('font-weight', 'bold')
+        plateEl.setAttribute('fill', '#facc15')
+        plateEl.setAttribute('font-family', 'monospace')
+        plateEl.textContent = plateText
+
+        const plateBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+        plateBg.setAttribute('x', x)
+        plateBg.setAttribute('y', y + h + 2)
+        plateBg.setAttribute('width', plateText.length * 7 + 10)
+        plateBg.setAttribute('height', 18)
+        plateBg.setAttribute('fill', 'rgba(0,0,0,0.8)')
+        plateBg.setAttribute('stroke', '#facc15')
+        plateBg.setAttribute('stroke-width', '1')
+
+        svg.appendChild(plateBg)
+        svg.appendChild(plateEl)
+      }
 
       // Draw corner markers
       const cornerSize = 8

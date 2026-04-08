@@ -22,56 +22,54 @@ export const useDetections = () => {
   })
 
   const updateDetections = useCallback((newDetections) => {
-    // Maintain rolling window of last 100 detections
     const updatedDetections = Array.isArray(newDetections) ? newDetections : [newDetections]
-    setDetections((prev) => {
-      const combined = [...prev, ...updatedDetections]
-      return combined.slice(-100)
-    })
 
-    // Aggregate metrics from current window
-    setDetections((currentDetections) => {
-      const vehicleCount = {
-        car: 0,
-        truck: 0,
-        bus: 0,
-        motorcycle: 0,
-        bicycle: 0,
-        pedestrian: 0
-      }
+    // Current frame: replace (not accumulate) so overlay shows only live detections
+    setDetections(updatedDetections)
 
+    // Accumulate history for timeline charts
+    setDetectionHistory((prev) => [
+      ...prev.slice(-99),
+      { timestamp: new Date(), detections: updatedDetections }
+    ])
+
+    // Update metrics: totalDetections = current frame count, vehicleCount = cumulative
+    setMetrics((prev) => {
+      const vehicleCount = { ...prev.vehicleCount }
       let totalConfidence = 0
 
-      currentDetections.forEach((det) => {
-        const type = det.type?.toLowerCase() || 'car'
+      updatedDetections.forEach((det) => {
+        // Backend sends class_name / vehicle_type; overlay expects type
+        const type = (det.type || det.class_name || det.vehicle_type || '').toLowerCase()
         if (vehicleCount.hasOwnProperty(type)) {
           vehicleCount[type] += 1
         }
         totalConfidence += det.confidence || 0
       })
 
-      const avgConfidence = currentDetections.length > 0
-        ? (totalConfidence / currentDetections.length * 100).toFixed(1)
+      const frameConfidence = updatedDetections.length > 0
+        ? (totalConfidence / updatedDetections.length * 100)
         : 0
 
-      const activeTracks = new Set(currentDetections.map(d => d.track_id)).size
+      // Running average confidence weighted by object count
+      const prevTotal = Object.values(prev.vehicleCount).reduce((a, b) => a + b, 0)
+      const newTotal = prevTotal + updatedDetections.length
+      const avgConfidence = newTotal > 0
+        ? ((Number(prev.avgConfidence) * prevTotal + frameConfidence * updatedDetections.length) / newTotal).toFixed(1)
+        : frameConfidence.toFixed(1)
 
-      setMetrics((prev) => ({
+      const activeTracks = new Set(
+        updatedDetections.map(d => d.track_id).filter(Boolean)
+      ).size || updatedDetections.length
+
+      return {
         ...prev,
         vehicleCount,
-        totalDetections: currentDetections.length,
+        totalDetections: updatedDetections.length,
         avgConfidence,
         activeTracks
-      }))
-
-      return currentDetections
+      }
     })
-
-    // Keep history (last 100 snapshots)
-    setDetectionHistory((prev) => [
-      ...prev.slice(-99),
-      { timestamp: new Date(), detections: updatedDetections }
-    ])
   }, [])
 
   const addIncident = useCallback((incident) => {
@@ -83,10 +81,13 @@ export const useDetections = () => {
   }, [])
 
   const updateMetrics = useCallback((newMetrics) => {
-    setMetrics((prev) => ({
-      ...prev,
-      ...newMetrics
-    }))
+    setMetrics((prev) => {
+      // totalDetections and activeTracks are live-only values managed by updateDetections.
+      // Never let a batch stats load overwrite them with a cumulative/historical number.
+      // eslint-disable-next-line no-unused-vars
+      const { totalDetections: _a, activeTracks: _b, ...rest } = newMetrics
+      return { ...prev, ...rest }
+    })
   }, [])
 
   const clearDetections = useCallback(() => {

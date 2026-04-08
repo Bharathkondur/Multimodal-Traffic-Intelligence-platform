@@ -100,11 +100,14 @@ async def start_detection_pipeline(
         )
 
         # Create processing configuration
+        # normalize=False: YOLO expects uint8 BGR; normalising to float32 here is redundant
+        # and can cause issues when YOLO's internal check skips its own /255 step.
         processing_config = ProcessingConfig(
             fps=30,
             target_fps=10,
             frame_width=1920,
             frame_height=1080,
+            normalize=False,
             batch_size=8,
             queue_size=100,
         )
@@ -117,14 +120,44 @@ async def start_detection_pipeline(
         )
 
         # Broadcast callbacks
-        async def on_detection(frame_data, detections):
-            await broadcast_detection(session_id, {"detections": detections, "frame_data": frame_data})
+        async def on_detection(frame_data, detections, frame_b64=None):
+            payload = {
+                "detections": detections,
+                "frame_id": frame_data.get("frame_id"),
+                "timestamp": frame_data.get("timestamp").isoformat()
+                    if frame_data.get("timestamp") else None,
+                "session_id": session_id,
+            }
+            if frame_b64:
+                payload["frame_data"] = frame_b64
+            await broadcast_detection(session_id, payload)
 
         async def on_incident(incident):
             await broadcast_incident(session_id, incident)
 
         async def on_metrics(metrics):
             await broadcast_metrics(session_id, metrics)
+
+        # Determine compute device for GPU acceleration
+        import torch
+        use_gpu = torch.cuda.is_available()
+        device_str = "cuda" if use_gpu else "cpu"
+        logger.info(f"Compute device: {device_str}")
+
+        # Load fast-ALPR for license plate recognition (GPU-accelerated when available)
+        ocr_reader = None
+        try:
+            from models.ocr import get_alpr_reader
+            ocr_reader = get_alpr_reader(device=device_str)
+            logger.info(f"fast-ALPR loaded on {device_str}")
+        except Exception as e:
+            logger.warning(f"fast-ALPR not available (plates skipped): {e}")
+
+        # Give the WebSocket client time to connect before we start broadcasting frames.
+        # Without this delay, early frames are broadcast to no one when the browser
+        # navigates to the dashboard right after upload.
+        logger.info("Waiting 2 s for WebSocket clients to connect...")
+        await asyncio.sleep(2.0)
 
         # Create stream processor
         processor = StreamProcessor(
@@ -135,6 +168,7 @@ async def start_detection_pipeline(
             on_detection=on_detection,
             on_incident=on_incident,
             on_metrics=on_metrics,
+            ocr_reader=ocr_reader,
         )
 
         # Process video frames

@@ -156,6 +156,7 @@ class StreamProcessor:
         speed_estimator=None,
         zone_analytics=None,
         db_factory=None,
+        ocr_reader=None,
     ) -> None:
         """
         Initialize the stream processor.
@@ -185,6 +186,8 @@ class StreamProcessor:
         self.speed_estimator = speed_estimator
         self.zone_analytics = zone_analytics
         self.db_factory = db_factory
+        self.ocr_reader = ocr_reader
+        self._ocr_frame_counter = 0  # only run OCR every N frames for performance
 
         # Callbacks
         self.on_detection = on_detection
@@ -387,10 +390,39 @@ class StreamProcessor:
                 self.metrics.detection_count += len(detections)
                 self.metrics.total_detections += len(detections)
 
+                if detections:
+                    logger.info(
+                        f"Frame {frame_data.get('frame_id')}: "
+                        f"{len(detections)} detections → broadcasting"
+                    )
+
+                # Encode frame as JPEG for live video streaming
+                frame_b64 = None
+                raw_frame = frame_data.get("frame")
+                if raw_frame is not None and raw_frame.size > 0:
+                    try:
+                        import cv2
+                        import base64 as _base64
+                        orig_h, orig_w = raw_frame.shape[:2]
+                        stream_w, stream_h = 1280, 720
+                        stream_frame = cv2.resize(raw_frame, (stream_w, stream_h))
+                        _, buf = cv2.imencode('.jpg', stream_frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                        frame_b64 = _base64.b64encode(buf).decode('utf-8')
+
+                        # Scale bboxes from original frame coords → 1280×720 stream coords
+                        sx = stream_w / orig_w if orig_w else 1.0
+                        sy = stream_h / orig_h if orig_h else 1.0
+                        for det in detections:
+                            if det.get("bbox") and len(det["bbox"]) == 4:
+                                x1, y1, x2, y2 = det["bbox"]
+                                det["bbox"] = [x1 * sx, y1 * sy, x2 * sx, y2 * sy]
+                    except Exception as e:
+                        logger.warning(f"Frame encoding failed: {e}")
+
                 # Broadcast detections to websocket
                 if self.on_detection:
                     try:
-                        await self.on_detection(frame_data, detections)
+                        await self.on_detection(frame_data, detections, frame_b64)
                     except Exception as e:
                         logger.error(f"Error in on_detection callback: {e}")
 
@@ -577,40 +609,54 @@ class StreamProcessor:
 
     def _open_stream(self) -> Any:
         """
-        Open the video stream based on source type.
+        Open the video stream based on source type using OpenCV.
 
         Returns:
-            Stream object (cv2.VideoCapture in real implementation)
+            cv2.VideoCapture object
         """
-        # This would be implemented with opencv-python in production
+        import cv2 as cv
         logger.info(f"Opening stream: {self.stream_source.type} - {self.stream_source.source}")
-        return {"type": self.stream_source.type, "source": self.stream_source.source}
+        cap = cv.VideoCapture(self.stream_source.source)
+        if not cap.isOpened():
+            raise RuntimeError(f"Failed to open video: {self.stream_source.source}")
+        logger.info(
+            f"Video opened: {int(cap.get(cv.CAP_PROP_FRAME_COUNT))} frames, "
+            f"{cap.get(cv.CAP_PROP_FPS):.1f} fps"
+        )
+        return cap
 
     async def _read_frames(self, stream: Any) -> AsyncGenerator:
         """
-        Async generator to read frames from stream.
-
-        Args:
-            stream: Stream object
+        Async generator to read frames from an OpenCV VideoCapture.
 
         Yields:
-            Frame data dictionaries
+            Frame data dictionaries with actual video frames
         """
+        import cv2 as cv
+        cap = stream
         frame_id = 0
-        # Simulate reading frames
-        while self._running and frame_id < 300:  # Demo: 300 frames
-            # In real implementation, would read actual video frames
-            frame = np.zeros((self.config.frame_height, self.config.frame_width, 3), dtype=np.uint8)
+        loop = asyncio.get_event_loop()
 
-            yield {
-                "frame": frame,
-                "frame_id": frame_id,
-                "timestamp": datetime.utcnow(),
-                "session_id": self._session_id,
-            }
+        try:
+            while self._running:
+                # Read frame in executor so it doesn't block the event loop
+                ret, frame = await loop.run_in_executor(None, cap.read)
+                if not ret or frame is None:
+                    logger.info(f"End of video stream after {frame_id} frames")
+                    break
 
-            frame_id += 1
-            await asyncio.sleep(0.01)  # Simulate frame reading
+                yield {
+                    "frame": frame,
+                    "frame_id": frame_id,
+                    "timestamp": datetime.utcnow(),
+                    "session_id": self._session_id,
+                }
+
+                frame_id += 1
+                # Yield control briefly so other coroutines can run
+                await asyncio.sleep(0)
+        finally:
+            cap.release()
 
     def _preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -668,21 +714,48 @@ class StreamProcessor:
             return []
 
         try:
-            # Call real detector
-            detections = self.detector.detect_frame(frame)
+            # Run synchronous YOLO inference in a thread so we don't block the event loop.
+            loop = asyncio.get_event_loop()
+            detections = await loop.run_in_executor(None, self.detector.detect_frame, frame)
             # Convert Detection dataclass objects to dictionaries
-            return [
+            result_dets = [
                 {
                     "class_id": d.class_id,
                     "class_name": d.class_name,
+                    # "type" is what the frontend overlay expects for colour-coding
+                    "type": d.vehicle_type.value if d.vehicle_type else d.class_name,
                     "confidence": d.confidence,
-                    "bbox": d.bbox,
+                    "bbox": list(d.bbox),
                     "centroid": d.centroid,
                     "area": d.area,
                     "vehicle_type": d.vehicle_type.value if d.vehicle_type else None,
                 }
                 for d in detections
             ]
+
+            # License plate recognition via fast-alpr — run every 3 frames for performance
+            self._ocr_frame_counter += 1
+            if self.ocr_reader and result_dets and self._ocr_frame_counter % 3 == 0:
+                try:
+                    from models.ocr import run_alpr
+                    plates = await loop.run_in_executor(
+                        None, run_alpr, frame, self.ocr_reader
+                    )
+                    # Match each detected plate to the vehicle bbox that contains it
+                    for plate in plates:
+                        px1, py1, px2, py2 = plate["bbox"]
+                        px_c = (px1 + px2) / 2
+                        py_c = (py1 + py2) / 2
+                        for det in result_dets:
+                            dx1, dy1, dx2, dy2 = det["bbox"]
+                            if dx1 <= px_c <= dx2 and dy1 <= py_c <= dy2:
+                                det["plate_number"] = plate["text"]
+                                det["plate_confidence"] = plate["confidence"]
+                                break
+                except Exception as e:
+                    logger.debug(f"ALPR error: {e}")
+
+            return result_dets
         except Exception as e:
             logger.error(f"Error running detection: {e}")
             return []

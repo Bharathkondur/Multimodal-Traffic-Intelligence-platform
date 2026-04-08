@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { AlertCircle, Settings, Grid3x3, List, Navigation } from 'lucide-react'
+import { AlertCircle, Grid3x3, List, Upload, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import VideoFeed from './VideoFeed'
 import MetricsPanel from './MetricsPanel'
 import ChatPanel from './ChatPanel'
 import IncidentLog from './IncidentLog'
-import DemoControls from './DemoControls'
+import UploadPanel from './UploadPanel'
 import { useDetections } from '../hooks/useDetections'
 import { useWebSocket } from '../hooks/useWebSocket'
 import api from '../services/api'
 
-const Dashboard = ({ sessionId = null }) => {
+const Dashboard = ({ sessionId: initialSessionId = null, onSessionChange = null }) => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('live')
   const [isLoading, setIsLoading] = useState(false)
@@ -18,6 +18,8 @@ const Dashboard = ({ sessionId = null }) => {
   const [layoutMode, setLayoutMode] = useState('grid')
   const [frameData, setFrameData] = useState(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showUpload, setShowUpload] = useState(false)
+  const [sessionId, setSessionId] = useState(initialSessionId)
   const [metricsHistory, setMetricsHistory] = useState([])
 
   const {
@@ -33,7 +35,18 @@ const Dashboard = ({ sessionId = null }) => {
   // WebSocket handler with proper channel parsing
   const handleWebSocketMessage = useCallback((message) => {
     if (message.type === 'detection') {
-      updateDetections(message.data.detections || [])
+      const frameDetections = message.data.detections || []
+      // Normalise type field: backend may send class_name / vehicle_type
+      const normalised = frameDetections.map(d => ({
+        ...d,
+        type: d.type || d.class_name || d.vehicle_type || 'car'
+      }))
+      updateDetections(normalised)
+      if (message.data.frame_data) {
+        const img = new Image()
+        img.src = 'data:image/jpeg;base64,' + message.data.frame_data
+        img.onload = () => setFrameData(img)
+      }
       if (message.data.metrics) {
         updateMetrics(message.data.metrics)
       }
@@ -53,6 +66,15 @@ const Dashboard = ({ sessionId = null }) => {
       }
     }
   }, [updateDetections, addIncident, updateMetrics])
+
+  // Sync when parent passes a new sessionId (e.g. from URL param)
+  useEffect(() => {
+    if (initialSessionId && initialSessionId !== sessionId) {
+      setSessionId(initialSessionId)
+      clearDetections()
+      setFrameData(null)
+    }
+  }, [initialSessionId])
 
   const { isConnected, error: wsError, send, subscribe } = useWebSocket(
     sessionId,
@@ -83,18 +105,29 @@ const Dashboard = ({ sessionId = null }) => {
     try {
       const responses = await Promise.allSettled([
         api.getSession(sessionId),
-        api.getDetections(sessionId, 0, 100),
         api.getIncidents(sessionId),
         api.getStats(sessionId)
       ])
 
+      // Load historical incidents
       if (responses[1].status === 'fulfilled' && responses[1].value.data) {
-        const detectionData = responses[1].value.data
-        updateDetections(Array.isArray(detectionData) ? detectionData : detectionData.detections || [])
+        const incidentData = responses[1].value.data
+        const list = Array.isArray(incidentData) ? incidentData : incidentData.incidents || []
+        list.forEach(inc => addIncident(inc))
       }
 
-      if (responses[3].status === 'fulfilled' && responses[3].value.data) {
-        updateMetrics(responses[3].value.data)
+      // Load aggregate session stats for charts (vehicle counts, confidence, etc.)
+      // Do NOT pass raw detection records to updateDetections — that sets "Total Objects"
+      // to the batch size (100). totalDetections is reserved for the live per-frame count.
+      if (responses[2].status === 'fulfilled' && responses[2].value.data) {
+        const stats = responses[2].value.data
+        updateMetrics({
+          vehicleCount: stats.vehicleCount || stats.vehicle_count || {},
+          avgConfidence: stats.avgConfidence ?? stats.avg_confidence ?? 0,
+          fps: stats.fps ?? 0,
+          latency: stats.latency ?? 0,
+          // totalDetections is intentionally NOT set here — it shows the live frame count
+        })
       }
     } catch (err) {
       setError('Failed to load session data')
@@ -136,14 +169,33 @@ const Dashboard = ({ sessionId = null }) => {
             )}
           </button>
           <button
-            onClick={() => navigate('/upload')}
-            className="btn btn-secondary btn-sm"
+            onClick={() => setShowUpload(!showUpload)}
+            className={`btn btn-sm ${showUpload ? 'btn-primary' : 'btn-secondary'}`}
             title="Upload video"
           >
-            <Navigation className="w-4 h-4" />
+            {showUpload ? <X className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
+            <span className="ml-1 text-xs">{showUpload ? 'Close' : 'Upload'}</span>
           </button>
         </div>
       </div>
+
+      {/* Upload Slide-down Panel */}
+      {showUpload && (
+        <div className="bg-slate-900 border-b border-slate-700 px-4 py-4 flex-shrink-0">
+          <UploadPanel
+            onUploadComplete={(result) => {
+              if (result.sessionId) {
+                setSessionId(result.sessionId)
+                clearDetections()
+                setFrameData(null)
+                if (onSessionChange) onSessionChange(result.sessionId)
+                navigate(`/?session=${result.sessionId}`)
+              }
+              setShowUpload(false)
+            }}
+          />
+        </div>
+      )}
 
       {/* Error Banner */}
       {error && (
@@ -162,10 +214,19 @@ const Dashboard = ({ sessionId = null }) => {
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         {!sessionId ? (
-          // No session - show demo controls
+          // No session — show upload prompt
           <div className="h-full flex items-center justify-center p-4">
-            <div className="max-w-2xl w-full">
-              <DemoControls onSessionCreated={(id) => window.location.href = `/?session=${id}`} />
+            <div className="text-center space-y-4">
+              <Upload className="w-16 h-16 text-slate-600 mx-auto" />
+              <p className="text-slate-400 text-lg">No active session</p>
+              <p className="text-slate-500 text-sm">Click the Upload button in the header to start analysing a video</p>
+              <button
+                onClick={() => setShowUpload(true)}
+                className="btn btn-primary"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Video
+              </button>
             </div>
           </div>
         ) : layoutMode === 'grid' ? (

@@ -9,7 +9,10 @@ import api from './services/api'
 const AppContent = () => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const [isDarkMode, setIsDarkMode] = useState(true)
+  const [isDarkMode, setIsDarkMode] = useState(
+    // Restore saved preference; default to dark
+    () => localStorage.getItem('darkMode') !== 'false'
+  )
   const [currentRoute, setCurrentRoute] = useState('dashboard')
   const [sessionId, setSessionId] = useState(null)
 
@@ -29,13 +32,22 @@ const AppContent = () => {
   }, [sessionParam])
 
   useEffect(() => {
-    // Apply dark mode
     if (isDarkMode) {
       document.documentElement.classList.add('dark')
     } else {
       document.documentElement.classList.remove('dark')
     }
   }, [isDarkMode])
+
+  // Apply initial theme before first paint to avoid flash
+  useEffect(() => {
+    const saved = localStorage.getItem('darkMode')
+    if (saved === 'false') {
+      document.documentElement.classList.remove('dark')
+    } else {
+      document.documentElement.classList.add('dark')
+    }
+  }, [])
 
   const handleLogout = () => {
     localStorage.removeItem('lastSessionId')
@@ -44,8 +56,9 @@ const AppContent = () => {
   }
 
   const handleDarkModeToggle = () => {
-    setIsDarkMode(!isDarkMode)
-    localStorage.setItem('darkMode', !isDarkMode)
+    const next = !isDarkMode
+    setIsDarkMode(next)
+    localStorage.setItem('darkMode', String(next))
   }
 
   const handleUploadComplete = (result) => {
@@ -71,7 +84,15 @@ const AppContent = () => {
         <Routes>
           <Route
             path="/"
-            element={<Dashboard sessionId={sessionId} />}
+            element={
+              <Dashboard
+                sessionId={sessionId}
+                onSessionChange={(id) => {
+                  setSessionId(id)
+                  localStorage.setItem('lastSessionId', id)
+                }}
+              />
+            }
           />
           <Route
             path="/upload"

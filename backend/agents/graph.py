@@ -391,7 +391,7 @@ class TrafficAnalysisGraph:
 
             # Call LLM for reasoning
             messages = state.messages + [HumanMessage(content=reasoning_prompt)]
-            response = await self.llm_with_tools.ainvoke({"messages": messages})
+            response = await self.llm_with_tools.ainvoke(messages)
 
             reasoning = response.content if hasattr(response, "content") else str(response)
 

@@ -6,6 +6,7 @@ user messages, maintaining conversation history, and handling LLM errors.
 """
 
 import logging
+import os
 from typing import Optional, Dict, Any
 from collections import defaultdict
 
@@ -18,6 +19,34 @@ logger = logging.getLogger(__name__)
 
 # In-memory conversation history per session (can be persisted to DB later)
 _conversation_history = defaultdict(list)
+
+
+async def _build_session_context(session_id: str) -> str:
+    """Query the database and build a plain-text context for the LLM."""
+    try:
+        from database.queries import get_detection_summary, _get_db
+        async with _get_db() as db:
+            summary = await get_detection_summary(db, session_id)
+            if not summary:
+                return "No detections recorded for this session yet."
+
+            parts = []
+            total = summary.get("total_detections", 0)
+            parts.append(f"Total detection events: {total}")
+
+            vt = summary.get("vehicle_type_breakdown", {})
+            if vt:
+                breakdown = ", ".join(f"{k}: {v}" for k, v in vt.items() if v)
+                parts.append(f"Vehicle type breakdown: {breakdown}")
+
+            conf = summary.get("confidence_stats", {})
+            if conf and conf.get("avg"):
+                parts.append(f"Average detection confidence: {conf['avg']:.1%}")
+
+            return "\n".join(parts)
+    except Exception as e:
+        logger.warning(f"Could not load session context from DB: {e}")
+        return "Detection data not available (database query failed)."
 
 
 async def process_message(
@@ -68,87 +97,70 @@ async def process_message(
     try:
         logger.info(f"Processing message for session {session_id}: {message[:100]}")
 
-        # Import LangGraph agent
+        # Fetch real detection data from DB so the LLM can answer accurately
+        context = await _build_session_context(session_id)
+
+        # Build conversation history for multi-turn context (last 3 exchanges)
+        history = _conversation_history[session_id][-6:]
+        _conversation_history[session_id].append({"role": "user", "content": message})
+
+        query_type = _determine_query_type(message)
+
+        # Call Gemini directly with the real data — this is more reliable than
+        # routing through the graph which has tools that lack session_id context.
         try:
-            from agents.graph import TrafficAnalysisGraph, QueryType
-        except ImportError:
-            logger.error("Failed to import TrafficAnalysisGraph")
-            return _fallback_response(
-                session_id,
-                "Failed to initialize agent",
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+
+            google_api_key = os.getenv("GOOGLE_API_KEY")
+            if not google_api_key:
+                raise ValueError("GOOGLE_API_KEY not set")
+
+            llm = ChatGoogleGenerativeAI(
+                model="gemini-2.5-flash",
+                google_api_key=google_api_key,
+                temperature=0.3,
             )
 
-        # Initialize LangGraph agent (use Gemini if available)
-        try:
-            logger.debug("Initializing TrafficAnalysisGraph")
-            try:
-                from agents.graph import LLMBackend
-                agent = TrafficAnalysisGraph(
-                    llm_backend=LLMBackend.GEMINI,
-                    llm_model="gemini-2.5-flash",
-                )
-            except Exception:
-                agent = TrafficAnalysisGraph()
-        except Exception as e:
-            logger.error(f"Failed to initialize agent: {e}")
-            return _fallback_response(session_id, f"Agent initialization error: {e}")
+            system_content = f"""You are a traffic intelligence analyst. Answer questions about the traffic monitoring session.
 
-        # Add message to conversation history
-        _conversation_history[session_id].append({
-            "role": "user",
-            "content": message,
-        })
+SESSION DATA (session_id: {session_id}):
+{context}
 
-        # Determine query type
-        query_type = _determine_query_type(message)
-        logger.debug(f"Detected query type: {query_type}")
+Rules:
+- Answer based only on the data above.
+- Be concise and specific — cite actual numbers.
+- If the data shows 0 detections, say so clearly.
+- Do not fabricate numbers or events not present in the data."""
 
-        # Prepare input for agent
-        agent_input = {
-            "user_query": message,
-            "query_type": query_type,
-            "session_id": session_id,
-            "messages": [],
-        }
+            msgs = [SystemMessage(content=system_content)]
+            for h in history:
+                if h["role"] == "user":
+                    msgs.append(HumanMessage(content=h["content"]))
+                else:
+                    msgs.append(AIMessage(content=h["content"]))
+            msgs.append(HumanMessage(content=message))
 
-        # Process through agent
-        try:
-            logger.debug("Running agent graph")
-            output = await agent.invoke(message)
+            llm_response = await llm.ainvoke(msgs)
+            response_text = llm_response.content
 
-            # Extract response
-            if isinstance(output, dict):
-                response_text = output.get(
-                    "response",
-                    output.get("final_response", "Analysis complete"),
-                )
-                analysis_data = output.get("data", {})
-            else:
-                response_text = str(output)
-                analysis_data = {}
+        except Exception as llm_error:
+            logger.error(f"LLM call failed: {llm_error}", exc_info=True)
+            # Plain-text fallback using only the DB context
+            response_text = (
+                f"Here is the raw session data (LLM unavailable: {llm_error}):\n\n{context}"
+            )
 
-        except Exception as agent_error:
-            logger.error(f"Agent execution error: {agent_error}", exc_info=True)
-            response_text = f"Error during analysis: {agent_error}"
-            analysis_data = {}
+        _conversation_history[session_id].append({"role": "assistant", "content": response_text})
 
-        # Add response to conversation history
-        _conversation_history[session_id].append({
-            "role": "assistant",
-            "content": response_text,
-        })
-
-        # Build response
-        response = {
+        logger.info(f"Message processed successfully for session {session_id}")
+        return {
             "response": response_text,
             "query_type": query_type,
-            "data": analysis_data,
+            "data": {"context": context},
             "session_id": session_id,
             "conversation_turn": len(_conversation_history[session_id]),
         }
-
-        logger.info(f"Message processed successfully for session {session_id}")
-        return response
 
     except Exception as e:
         logger.error(f"Error processing message: {e}", exc_info=True)
