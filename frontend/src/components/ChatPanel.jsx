@@ -147,7 +147,7 @@ const ChatPanel = ({ sessionId, disabled = false }) => {
       <div className="card-header flex justify-between items-center">
         <div>
           <h3 className="card-title">AI Assistant</h3>
-          <p className="card-subtitle">Traffic Intelligence Chat</p>
+          <p className="card-subtitle">Scene Intelligence Chat</p>
         </div>
         <button
           onClick={clearChat}

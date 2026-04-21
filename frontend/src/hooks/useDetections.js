@@ -4,6 +4,9 @@ export const useDetections = () => {
   const [detections, setDetections] = useState([])
   const [detectionHistory, setDetectionHistory] = useState([])
   const [incidents, setIncidents] = useState([])
+  // Scene Intelligence state — captions (VLM narration) and rule-engine alerts
+  const [captions, setCaptions] = useState([])
+  const [alerts, setAlerts] = useState([])
   const [metrics, setMetrics] = useState({
     totalDetections: 0,
     vehicleCount: {
@@ -80,6 +83,23 @@ export const useDetections = () => {
     }))
   }, [])
 
+  const addCaption = useCallback((caption) => {
+    // Captions arrive every ~2s; keep the last 40 so auto-scroll stays cheap.
+    setCaptions((prev) => {
+      const next = [...prev, caption]
+      return next.length > 40 ? next.slice(-40) : next
+    })
+  }, [])
+
+  const addAlert = useCallback((alert) => {
+    // Dedupe by alert_id / id so live + history merges don't double-count.
+    const key = alert.alert_id || alert.id
+    setAlerts((prev) => {
+      if (key && prev.some((a) => (a.alert_id || a.id) === key)) return prev
+      return [alert, ...prev].slice(0, 200)
+    })
+  }, [])
+
   const updateMetrics = useCallback((newMetrics) => {
     setMetrics((prev) => {
       // totalDetections and activeTracks are live-only values managed by updateDetections.
@@ -94,6 +114,8 @@ export const useDetections = () => {
     setDetections([])
     setDetectionHistory([])
     setIncidents([])
+    setCaptions([])
+    setAlerts([])
     setMetrics({
       totalDetections: 0,
       vehicleCount: {
@@ -132,9 +154,13 @@ export const useDetections = () => {
     detections,
     detectionHistory,
     incidents,
+    captions,
+    alerts,
     metrics,
     updateDetections,
     addIncident,
+    addCaption,
+    addAlert,
     updateMetrics,
     clearDetections,
     getDetectionsByType,

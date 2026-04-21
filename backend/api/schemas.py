@@ -470,29 +470,40 @@ class UploadResponse(BaseModel):
 
 class StreamStartRequest(BaseModel):
     """
-    Request to start streaming from RTSP or webcam.
+    Request to start streaming from RTSP, HTTP, YouTube, or webcam.
 
     Attributes:
         name: Session name
-        stream_url: RTSP stream URL or 'webcam' for default device
+        stream_url: RTSP URL, HTTP(S) video URL, YouTube URL, or 'webcam'
         fps: Target frames per second
     """
 
     name: str = Field(..., min_length=1, max_length=255, description="Session name")
     stream_url: str = Field(
-        ..., description="RTSP URL or 'webcam' for device 0"
+        ...,
+        description=(
+            "RTSP URL (rtsp://...), HTTP(S) video / MJPEG URL, YouTube URL "
+            "(https://www.youtube.com/watch?v=...), or 'webcam' for device 0"
+        ),
     )
-    fps: int = Field(default=30, ge=1, le=120, description="Target FPS")
+    fps: int = Field(default=15, ge=1, le=60, description="Target FPS")
 
     @field_validator("stream_url")
     @classmethod
     def validate_stream_url(cls, v: str) -> str:
-        """Validate stream URL format."""
-        if v != "webcam" and not v.startswith("rtsp://") and not v.startswith("http"):
-            raise ValueError(
-                "stream_url must be 'webcam' or start with 'rtsp://' or 'http'"
-            )
-        return v
+        """Validate that stream URL is a shape we can handle."""
+        v = v.strip()
+        if not v:
+            raise ValueError("stream_url cannot be empty")
+        if v == "webcam" or v.isdigit():
+            return v
+        lowered = v.lower()
+        if lowered.startswith(("rtsp://", "rtmp://", "http://", "https://")):
+            return v
+        raise ValueError(
+            "stream_url must be 'webcam', an RTSP/RTMP URL, or an HTTP(S) / "
+            "YouTube URL"
+        )
 
     model_config = {
         "json_schema_extra": {
@@ -500,8 +511,13 @@ class StreamStartRequest(BaseModel):
                 {
                     "name": "Main Intersection Camera",
                     "stream_url": "rtsp://camera.example.com/stream",
-                    "fps": 30,
-                }
+                    "fps": 15,
+                },
+                {
+                    "name": "YouTube Traffic Cam",
+                    "stream_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                    "fps": 15,
+                },
             ]
         }
     }

@@ -50,9 +50,20 @@ export const api = {
     })
   },
 
-  // Stream URL endpoints
-  streamFromUrl: (url) =>
-    apiClient.post('/sessions/stream', { url }),
+  // Stream URL endpoints.
+  // Accepts either a raw URL string (legacy) or an options object.
+  // Backend expects { name, stream_url, fps }.
+  streamFromUrl: (urlOrOptions) => {
+    const payload =
+      typeof urlOrOptions === 'string'
+        ? { name: 'Live Stream', stream_url: urlOrOptions, fps: 15 }
+        : {
+            name: urlOrOptions.name || 'Live Stream',
+            stream_url: urlOrOptions.stream_url || urlOrOptions.url,
+            fps: urlOrOptions.fps || 15,
+          }
+    return apiClient.post('/sessions/stream', payload)
+  },
 
   // Detection endpoints
   getDetections: (sessionId, skip = 0, limit = 50) =>
@@ -131,7 +142,37 @@ export const api = {
     apiClient.get('/config'),
 
   updateConfig: (config) =>
-    apiClient.put('/config', config)
+    apiClient.put('/config', config),
+
+  // ---- Scene Intelligence: watchlist rules -----------------------------
+  listRules: (sessionId) =>
+    apiClient.get(`/scene/sessions/${sessionId}/rules`),
+
+  createRule: (sessionId, body) =>
+    apiClient.post(`/scene/sessions/${sessionId}/rules`, body),
+
+  deleteRule: (sessionId, ruleId) =>
+    apiClient.delete(`/scene/sessions/${sessionId}/rules/${ruleId}`),
+
+  seedDemoRules: (sessionId) =>
+    apiClient.post(`/scene/sessions/${sessionId}/rules/seed`),
+
+  listRulePresets: () =>
+    apiClient.get('/scene/rule-presets'),
+
+  // ---- Scene Intelligence: monitor zones (new schema) ------------------
+  listMonitorZones: (sessionId) =>
+    apiClient.get(`/scene/sessions/${sessionId}/zones`),
+
+  replaceMonitorZones: (sessionId, zones) =>
+    apiClient.put(`/scene/sessions/${sessionId}/zones`, zones),
+
+  // ---- Scene Intelligence: alerts --------------------------------------
+  listAlerts: (sessionId, params = {}) =>
+    apiClient.get(`/scene/sessions/${sessionId}/alerts`, { params }),
+
+  getAlertSnapshot: (sessionId, alertId) =>
+    apiClient.get(`/scene/sessions/${sessionId}/alerts/${alertId}/snapshot`),
 }
 
 export default api

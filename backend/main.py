@@ -25,6 +25,8 @@ from models.ocr import load_ocr_model
 from utils.redis_client import init_redis
 from api.routes import router as api_router
 from api.websocket_routes import router as ws_router
+from api.scene_routes import router as scene_router
+from processing.monitors import MonitorEngine
 
 # Configure logging
 logging.basicConfig(
@@ -170,6 +172,11 @@ app.add_middleware(
 # Include routers
 app.include_router(api_router)
 app.include_router(ws_router)
+app.include_router(scene_router)
+
+# Shared Scene Intelligence monitor engine — a single instance per process
+# so REST writes (create rule) are visible to the StreamProcessor immediately.
+app.state.monitor_engine = MonitorEngine()
 
 
 # Exception handlers

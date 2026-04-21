@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multimodal Scene Intelligence Platform — Bharath Kondur</title>
+<meta name="description" content="Real-time vehicle detection, tracking, ANPR, and incident alerting from any RTSP, YouTube, or video source — with an LLM chat interface over the live data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --bg2: #0d1219;
+    --bg3: #111820;
+    --text: #e8eef5;
+    --muted: #7a8799;
+    --blue: #1e6fff;
+    --cyan: #00d4ff;
+    --amber: #f5a623;
+    --green: #3ddc84;
+    --red: #ff5a5f;
+    --line: rgba(255,255,255,0.06);
+    --ff-mono: 'Space Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --ff-display: 'Syne', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--ff-mono);
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* custom cursor */
+  .cursor-dot, .cursor-ring {
+    position: fixed;
+    top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.08s ease-out;
+    mix-blend-mode: difference;
+  }
+  .cursor-dot {
+    width: 6px; height: 6px;
+    background: var(--cyan);
+    border-radius: 50%;
+  }
+  .cursor-ring {
+    width: 36px; height: 36px;
+    border: 1px solid rgba(0, 212, 255, 0.6);
+    border-radius: 50%;
+    transition: transform 0.2s ease-out, width 0.2s, height 0.2s;
+  }
+  .cursor-ring.hover {
+    width: 56px; height: 56px;
+    border-color: var(--cyan);
+  }
+  @media (hover: none) {
+    body { cursor: auto; }
+    .cursor-dot, .cursor-ring { display: none; }
+  }
+
+  /* scan lines */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,0.01) 0,
+      rgba(255,255,255,0.01) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* noise texture */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    opacity: 0.04;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  /* nav */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 20px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(8, 12, 16, 0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+    z-index: 100;
+  }
+  nav .logo {
+    font-family: var(--ff-display);
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+  }
+  nav .logo .accent { color: var(--cyan); }
+  nav .back {
+    font-size: 12px;
+    color: var(--muted);
+    transition: color 0.2s;
+  }
+  nav .back:hover { color: var(--cyan); }
+
+  main { position: relative; z-index: 2; }
+
+  /* hero */
+  .hero {
+    min-height: 100vh;
+    padding: 140px 48px 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(30, 111, 255, 0.15), transparent 60%),
+      radial-gradient(ellipse at 80% 70%, rgba(0, 212, 255, 0.10), transparent 60%),
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: auto, auto, 48px 48px, 48px 48px;
+  }
+
+  .eyebrow {
+    font-family: var(--ff-mono);
+    font-size: 12px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--cyan);
+  }
+
+  .hero h1 {
+    font-family: var(--ff-display);
+    font-weight: 800;
+    font-size: clamp(40px, 6vw, 84px);
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    max-width: 1100px;
+    margin-bottom: 32px;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(90deg, var(--blue), var(--cyan));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .hero-sub {
+    font-family: var(--ff-mono);
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 720px;
+    margin-bottom: 48px;
+    line-height: 1.7;
+  }
+
+  .cta-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary, .btn-ghost {
+    font-family: var(--ff-mono);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 16px 28px;
+    cursor: none;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+    border: none;
+  }
+  .btn-primary {
+    background: var(--blue);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--cyan);
+    color: var(--bg);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+  }
+  .btn-ghost:hover {
+    box-shadow: inset 0 0 0 1px var(--cyan);
+    color: var(--cyan);
+  }
+
+  .hero-meta {
+    position: absolute;
+    bottom: 40px;
+    left: 48px;
+    right: 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 24px;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .hero-meta span { display: block; color: var(--text); font-size: 12px; margin-top: 4px; letter-spacing: 0; text-transform: none; }
+
+  /* sections */
+  section {
+    padding: 100px 48px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  .section-head {
+    display: flex;
+    gap: 16px;
+    align-items: baseline;
+    margin-bottom: 48px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
+  }
+  .section-head .num {
+    font-family: var(--ff-mono);
+    font-size: 12px;
+    color: var(--cyan);
+    letter-spacing: 0.15em;
+  }
+  .section-head h2 {
+    font-family: var(--ff-display);
+    font-weight: 700;
+    font-size: clamp(28px, 3.5vw, 44px);
+    letter-spacing: -0.02em;
+  }
+
+  /* video */
+  .video-wrap {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .video-wrap iframe,
+  .video-wrap .video-placeholder {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+  .video-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background:
+      radial-gradient(ellipse at center, rgba(30, 111, 255, 0.2), transparent 60%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 4px);
+  }
+  .video-placeholder .play {
+    width: 80px; height: 80px;
+    border: 2px solid var(--cyan);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .video-placeholder .play::after {
+    content: '';
+    width: 0; height: 0;
+    border-left: 18px solid var(--cyan);
+    border-top: 12px solid transparent;
+    border-bottom: 12px solid transparent;
+    margin-left: 4px;
+  }
+  .video-placeholder .label {
+    font-size: 12px; color: var(--muted); letter-spacing: 0.2em; text-transform: uppercase;
+  }
+
+  /* 3-col grid (problem/solution/impact) */
+  .three-col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  @media (max-width: 900px) { .three-col { grid-template-columns: 1fr; } }
+
+  .pillar {
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    padding: 32px;
+    position: relative;
+  }
+  .pillar::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--blue);
+  }
+  .pillar .tag {
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 12px;
+  }
+  .pillar h3 {
+    font-family: var(--ff-display);
+    font-weight: 700;
+    font-size: 22px;
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+  }
+  .pillar p {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  /* architecture */
+  .arch-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    padding: 40px;
+    overflow-x: auto;
+  }
+  .arch-svg {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+    display: block;
+  }
+  .arch-caption {
+    margin-top: 24px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.7;
+  }
+
+  /* tech chips */
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .tech-card {
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    padding: 20px;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .tech-card::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--blue), var(--cyan));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s;
+  }
+  .tech-card:hover { border-color: var(--cyan); }
+  .tech-card:hover::after { transform: scaleX(1); }
+  .tech-card .cat {
+    font-size: 11px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 10px;
+  }
+  .tech-card .list {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  /* features */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+  }
+  .feature {
+    padding: 24px;
+    background: var(--bg2);
+    border: 1px solid var(--line);
+  }
+  .feature h4 {
+    font-family: var(--ff-display);
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--cyan);
+    letter-spacing: -0.01em;
+  }
+  .feature p {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* performance stats */
+  .stats-panel {
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    padding: 48px 40px 40px;
+    position: relative;
+  }
+  .stats-panel::before {
+    content: 'MEASURED ON MACBOOK PRO M2 · 720P · CPU-ONLY';
+    position: absolute;
+    top: -10px;
+    left: 24px;
+    background: var(--bg);
+    padding: 0 12px;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 32px;
+  }
+  .stat .val {
+    font-family: var(--ff-display);
+    font-weight: 800;
+    font-size: clamp(28px, 3vw, 40px);
+    color: var(--text);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .stat .val .unit {
+    font-size: 0.5em;
+    color: var(--cyan);
+    margin-left: 4px;
+  }
+  .stat .lbl {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-top: 8px;
+  }
+
+  /* terminal card */
+  .terminal {
+    background: var(--bg3);
+    border: 1px solid var(--line);
+    font-family: var(--ff-mono);
+    overflow: hidden;
+  }
+  .terminal .bar {
+    padding: 12px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .terminal .dot {
+    width: 12px; height: 12px; border-radius: 50%;
+  }
+  .dot.r { background: var(--red); }
+  .dot.y { background: var(--amber); }
+  .dot.g { background: var(--green); }
+  .terminal .title {
+    margin-left: 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .terminal pre {
+    padding: 24px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text);
+    overflow-x: auto;
+  }
+  .terminal pre .c { color: var(--cyan); }
+  .terminal pre .m { color: var(--muted); }
+  .terminal pre .a { color: var(--amber); }
+
+  /* footer */
+  footer {
+    padding: 80px 48px 60px;
+    border-top: 1px solid var(--line);
+    margin-top: 80px;
+  }
+  .footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .footer-inner .brand {
+    font-family: var(--ff-display);
+    font-weight: 800;
+    font-size: 16px;
+  }
+  .footer-inner .brand .accent { color: var(--cyan); }
+  .footer-inner .meta {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* fade-up on scroll */
+  .fade-up {
+    opacity: 0;
+    transform: translateY(32px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+  }
+  .fade-up.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (max-width: 700px) {
+    nav, section, footer { padding-left: 24px; padding-right: 24px; }
+    .hero { padding: 120px 24px 60px; }
+    .hero-meta { left: 24px; right: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor-dot"></div>
+<div class="cursor-ring"></div>
+
+<nav>
+  <a href="../index.html" class="logo">bharath<span class="accent">.kondur</span></a>
+  <a href="../index.html" class="back">← back to portfolio</a>
+</nav>
+
+<main>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="eyebrow">Project 04 · Scene Intelligence · VLM + Pose + Rules</div>
+  <h1>Multimodal <span class="grad">Scene Intelligence</span> Platform.</h1>
+  <p class="hero-sub">
+    Point it at a camera or a video and it tells you, in real time, what is moving, where, how fast, and what just went wrong.
+    Detection, tracking, ANPR, and incident alerting over any RTSP / YouTube / HTTP / uploaded source — with an LLM chat interface
+    over the live data.
+  </p>
+  <div class="cta-row">
+    <a href="https://youtu.be/TODO" target="_blank" rel="noopener" class="btn-primary">▶ Watch 60s Demo</a>
+    <a href="https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform" target="_blank" rel="noopener" class="btn-ghost">View on GitHub →</a>
+  </div>
+
+  <div class="hero-meta">
+    <div>Role <span>Solo builder · design → ship</span></div>
+    <div>Stack <span>YOLOv8 · DeepSORT · FastAPI · Gemini · React</span></div>
+    <div>Status <span>v1 · docker compose up ready</span></div>
+  </div>
+</section>
+
+<!-- VIDEO -->
+<section id="demo">
+  <div class="section-head fade-up">
+    <span class="num">01 /</span>
+    <h2>The demo, in 60 seconds.</h2>
+  </div>
+  <div class="video-wrap fade-up">
+    <!-- Replace TODO with YouTube video ID once recorded -->
+    <div class="video-placeholder" id="video-placeholder">
+      <div class="play"></div>
+      <div class="label">Click to watch on YouTube</div>
+    </div>
+    <!--
+    Once uploaded, replace the placeholder above with:
+    <iframe src="https://www.youtube.com/embed/VIDEO_ID?rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    -->
+  </div>
+</section>
+
+<!-- PROBLEM / SOLUTION / IMPACT -->
+<section id="why">
+  <div class="section-head fade-up">
+    <span class="num">02 /</span>
+    <h2>Why this exists.</h2>
+  </div>
+  <div class="three-col">
+    <div class="pillar fade-up">
+      <div class="tag">Problem</div>
+      <h3>Traffic footage is noisy, multi-source, and under-read.</h3>
+      <p>
+        Smart-city operators have hundreds of RTSP feeds, dashcams, and uploaded clips. Most pipelines detect
+        objects but lose identity across frames, can't read plates, and surface raw events instead of insight.
+        Analysts end up scrubbing video manually.
+      </p>
+    </div>
+    <div class="pillar fade-up">
+      <div class="tag">Solution</div>
+      <h3>One pipeline from pixels to natural-language answers.</h3>
+      <p>
+        A six-stage async pipeline fuses YOLOv8 detection, DeepSORT tracking, EasyOCR plate reading, and
+        incident heuristics into a single event stream — then layers a Gemini-backed chat agent on top,
+        grounded in live detection data.
+      </p>
+    </div>
+    <div class="pillar fade-up">
+      <div class="tag">Impact</div>
+      <h3>Answers in seconds, not hours.</h3>
+      <p>
+        Operators ask <em>"how many trucks passed in the last hour?"</em> instead of scrubbing 60 minutes of footage.
+        Stopped-vehicle and congestion alerts fire the moment they happen. Ingest works on any camera source
+        out of the box — including YouTube URLs.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="section-head fade-up">
+    <span class="num">03 /</span>
+    <h2>How it's built.</h2>
+  </div>
+  <div class="arch-wrap fade-up">
+    <svg class="arch-svg" viewBox="0 0 1000 440" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gradPipe" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#1e6fff"/>
+          <stop offset="100%" stop-color="#00d4ff"/>
+        </linearGradient>
+        <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <polygon points="0 0, 8 4, 0 8" fill="#00d4ff"/>
+        </marker>
+      </defs>
+
+      <!-- Ingest sources -->
+      <g font-family="Space Mono" font-size="11" fill="#e8eef5">
+        <rect x="20" y="20" width="160" height="32" fill="#0d1219" stroke="#1e6fff" stroke-width="1"/>
+        <text x="100" y="40" text-anchor="middle">RTSP / RTMP</text>
+        <rect x="20" y="60" width="160" height="32" fill="#0d1219" stroke="#1e6fff" stroke-width="1"/>
+        <text x="100" y="80" text-anchor="middle">YouTube (yt-dlp)</text>
+        <rect x="20" y="100" width="160" height="32" fill="#0d1219" stroke="#1e6fff" stroke-width="1"/>
+        <text x="100" y="120" text-anchor="middle">HTTP(S) / file</text>
+        <rect x="20" y="140" width="160" height="32" fill="#0d1219" stroke="#1e6fff" stroke-width="1"/>
+        <text x="100" y="160" text-anchor="middle">Webcam</text>
+      </g>
+
+      <!-- Pipeline stages -->
+      <g font-family="Space Mono" font-size="11" fill="#e8eef5">
+        <rect x="240" y="20" width="180" height="52" fill="#111820" stroke="#00d4ff" stroke-width="1"/>
+        <text x="330" y="42" text-anchor="middle">1 · Frame extraction</text>
+        <text x="330" y="58" text-anchor="middle" fill="#7a8799">OpenCV</text>
+
+        <rect x="240" y="82" width="180" height="52" fill="#111820" stroke="#00d4ff" stroke-width="1"/>
+        <text x="330" y="104" text-anchor="middle">2 · Detection</text>
+        <text x="330" y="120" text-anchor="middle" fill="#7a8799">YOLOv8</text>
+
+        <rect x="240" y="144" width="180" height="52" fill="#111820" stroke="#00d4ff" stroke-width="1"/>
+        <text x="330" y="166" text-anchor="middle">3 · Tracking</text>
+        <text x="330" y="182" text-anchor="middle" fill="#7a8799">DeepSORT</text>
+
+        <rect x="240" y="206" width="180" height="52" fill="#111820" stroke="#00d4ff" stroke-width="1"/>
+        <text x="330" y="228" text-anchor="middle">4 · ANPR (every 3rd frame)</text>
+        <text x="330" y="244" text-anchor="middle" fill="#7a8799">EasyOCR</text>
+
+        <rect x="240" y="268" width="180" height="52" fill="#111820" stroke="#00d4ff" stroke-width="1"/>
+        <text x="330" y="290" text-anchor="middle">5 · Incidents</text>
+        <text x="330" y="306" text-anchor="middle" fill="#7a8799">stopped · congestion · crowd</text>
+
+        <rect x="240" y="330" width="180" height="52" fill="#111820" stroke="#00d4ff" stroke-width="1"/>
+        <text x="330" y="352" text-anchor="middle">6 · Metrics + DB writes</text>
+        <text x="330" y="368" text-anchor="middle" fill="#7a8799">1s broadcast · 5s batch</text>
+      </g>
+
+      <!-- Transport -->
+      <g font-family="Space Mono" font-size="11" fill="#e8eef5">
+        <rect x="480" y="82" width="160" height="52" fill="#0d1219" stroke="#f5a623" stroke-width="1"/>
+        <text x="560" y="104" text-anchor="middle">WebSocket</text>
+        <text x="560" y="120" text-anchor="middle" fill="#7a8799">live frames + metrics</text>
+
+        <rect x="480" y="206" width="160" height="52" fill="#0d1219" stroke="#f5a623" stroke-width="1"/>
+        <text x="560" y="228" text-anchor="middle">PostgreSQL</text>
+        <text x="560" y="244" text-anchor="middle" fill="#7a8799">event log</text>
+
+        <rect x="480" y="330" width="160" height="52" fill="#0d1219" stroke="#f5a623" stroke-width="1"/>
+        <text x="560" y="352" text-anchor="middle">Redis</text>
+        <text x="560" y="368" text-anchor="middle" fill="#7a8799">session state</text>
+      </g>
+
+      <!-- Frontend -->
+      <g font-family="Space Mono" font-size="11" fill="#e8eef5">
+        <rect x="700" y="20" width="220" height="52" fill="#111820" stroke="#00d4ff" stroke-width="1"/>
+        <text x="810" y="42" text-anchor="middle">React Dashboard</text>
+        <text x="810" y="58" text-anchor="middle" fill="#7a8799">frame overlay · metrics · timeline</text>
+
+        <rect x="700" y="82" width="220" height="52" fill="#111820" stroke="#00d4ff" stroke-width="1"/>
+        <text x="810" y="104" text-anchor="middle">Chat agent</text>
+        <text x="810" y="120" text-anchor="middle" fill="#7a8799">LangGraph + Gemini 2.5</text>
+
+        <rect x="700" y="206" width="220" height="52" fill="#111820" stroke="#00d4ff" stroke-width="1"/>
+        <text x="810" y="228" text-anchor="middle">Grafana + Prometheus</text>
+        <text x="810" y="244" text-anchor="middle" fill="#7a8799">ops dashboards</text>
+      </g>
+
+      <!-- Arrows: sources → stage 1 -->
+      <g stroke="#00d4ff" stroke-width="1" fill="none" opacity="0.7">
+        <path d="M180 36 L240 40" marker-end="url(#arrow)"/>
+        <path d="M180 76 L240 48" marker-end="url(#arrow)"/>
+        <path d="M180 116 L240 56" marker-end="url(#arrow)"/>
+        <path d="M180 156 L240 64" marker-end="url(#arrow)"/>
+        <!-- pipeline vertical -->
+        <path d="M330 72 L330 82" marker-end="url(#arrow)"/>
+        <path d="M330 134 L330 144" marker-end="url(#arrow)"/>
+        <path d="M330 196 L330 206" marker-end="url(#arrow)"/>
+        <path d="M330 258 L330 268" marker-end="url(#arrow)"/>
+        <path d="M330 320 L330 330" marker-end="url(#arrow)"/>
+        <!-- pipeline → transport -->
+        <path d="M420 170 C 450 170 450 108 480 108" marker-end="url(#arrow)"/>
+        <path d="M420 294 C 450 294 450 232 480 232" marker-end="url(#arrow)"/>
+        <path d="M420 356 C 450 356 450 356 480 356" marker-end="url(#arrow)"/>
+        <!-- transport → frontend -->
+        <path d="M640 108 L700 46" marker-end="url(#arrow)"/>
+        <path d="M640 232 L700 108" marker-end="url(#arrow)"/>
+        <path d="M640 232 L700 232" marker-end="url(#arrow)"/>
+      </g>
+    </svg>
+    <p class="arch-caption">
+      Six asyncio stages run concurrently per session. Frames flow left to right with a back-pressure cap of 100 on the detection queue,
+      so a slow stage drops frames instead of building unbounded memory. DB writes are batched every 5 s; metrics broadcast every 1 s.
+    </p>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<section id="stack">
+  <div class="section-head fade-up">
+    <span class="num">04 /</span>
+    <h2>Under the hood.</h2>
+  </div>
+  <div class="tech-grid">
+    <div class="tech-card fade-up"><div class="cat">Vision</div><div class="list">YOLOv8 · DeepSORT · EasyOCR · OpenCV</div></div>
+    <div class="tech-card fade-up"><div class="cat">Backend</div><div class="list">FastAPI · asyncio · SQLAlchemy 2.0 · asyncpg · Alembic</div></div>
+    <div class="tech-card fade-up"><div class="cat">Data</div><div class="list">PostgreSQL 16 · Redis 7</div></div>
+    <div class="tech-card fade-up"><div class="cat">AI / Agents</div><div class="list">LangGraph · LangChain · Gemini 2.5 Flash</div></div>
+    <div class="tech-card fade-up"><div class="cat">Frontend</div><div class="list">React 18 · Vite · Tailwind · Recharts · WebSocket</div></div>
+    <div class="tech-card fade-up"><div class="cat">Ingest</div><div class="list">yt-dlp (YouTube) · OpenCV VideoCapture (RTSP/HTTP/file)</div></div>
+    <div class="tech-card fade-up"><div class="cat">Ops</div><div class="list">Docker Compose · Nginx · Grafana · Prometheus</div></div>
+    <div class="tech-card fade-up"><div class="cat">Testing</div><div class="list">pytest · pyflakes · AST verification</div></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-head fade-up">
+    <span class="num">05 /</span>
+    <h2>What it does, end-to-end.</h2>
+  </div>
+  <div class="feature-grid">
+    <div class="feature fade-up">
+      <h4>Ingest anything</h4>
+      <p>RTSP, RTMP, HTTP(S), YouTube (resolved via yt-dlp), webcam, or uploaded MP4 / WebM / MOV / MKV. One endpoint, one pipeline.</p>
+    </div>
+    <div class="feature fade-up">
+      <h4>Detect + track</h4>
+      <p>Six vehicle and pedestrian classes via YOLOv8 with persistent DeepSORT IDs that survive occlusion.</p>
+    </div>
+    <div class="feature fade-up">
+      <h4>Read plates</h4>
+      <p>EasyOCR license-plate extraction every third frame per detection, with confidence scoring (threshold 0.3) and append-only archival.</p>
+    </div>
+    <div class="feature fade-up">
+      <h4>Catch incidents</h4>
+      <p>Concurrent heuristics for stopped vehicles, congestion clusters, crowds, and accident patterns — all on the same frame stream.</p>
+    </div>
+    <div class="feature fade-up">
+      <h4>Chat-over-data</h4>
+      <p>Gemini-backed agent grounded in live detection + incident data. Ask <em>"how many trucks went through in the last hour?"</em> in plain English.</p>
+    </div>
+    <div class="feature fade-up">
+      <h4>Reconnect forever</h4>
+      <p>Streams drop. The pipeline retries 5× with 5 s backoff and the frontend WebSocket reconnects with exponential backoff. No manual restarts.</p>
+    </div>
+    <div class="feature fade-up">
+      <h4>Back-pressure honest</h4>
+      <p>The detection queue caps at 100 frames. When a stage can't keep up it drops frames instead of ballooning memory — production-safe by default.</p>
+    </div>
+    <div class="feature fade-up">
+      <h4>Observable</h4>
+      <p>Grafana dashboards and Prometheus metrics out of the box: FPS, detection latency, DB write throughput, per-session health.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PERFORMANCE -->
+<section id="performance">
+  <div class="section-head fade-up">
+    <span class="num">06 /</span>
+    <h2>Numbers.</h2>
+  </div>
+  <div class="stats-panel fade-up">
+    <div class="stats-grid">
+      <div class="stat"><div class="val">12–15<span class="unit">FPS</span></div><div class="lbl">frame processing</div></div>
+      <div class="stat"><div class="val">70–110<span class="unit">ms</span></div><div class="lbl">detection latency</div></div>
+      <div class="stat"><div class="val">1280×720<span class="unit">q60</span></div><div class="lbl">WS frame format</div></div>
+      <div class="stat"><div class="val">5<span class="unit">s</span></div><div class="lbl">DB write batch interval</div></div>
+      <div class="stat"><div class="val">100</div><div class="lbl">queue cap · drop threshold</div></div>
+      <div class="stat"><div class="val">2<span class="unit">concurrent</span></div><div class="lbl">streams on laptop CPU</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TRY IT LOCALLY -->
+<section id="try">
+  <div class="section-head fade-up">
+    <span class="num">07 /</span>
+    <h2>Try it locally.</h2>
+  </div>
+  <div class="terminal fade-up">
+    <div class="bar">
+      <div class="dot r"></div>
+      <div class="dot y"></div>
+      <div class="dot g"></div>
+      <div class="title">~/multimodal-traffic-intelligence</div>
+    </div>
+<pre><span class="m"># 1. clone</span>
+<span class="c">$</span> git clone https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform.git
+<span class="c">$</span> cd Multimodal-Traffic-Intelligence-platform
+
+<span class="m"># 2. configure (optional: GOOGLE_API_KEY for chat)</span>
+<span class="c">$</span> cp .env.example .env
+
+<span class="m"># 3. run</span>
+<span class="c">$</span> docker compose up --build
+
+<span class="m"># open:</span>
+<span class="a">http://localhost:3000</span>   <span class="m">→ dashboard</span>
+<span class="a">http://localhost:8000/docs</span> <span class="m">→ API (Swagger)</span>
+<span class="a">http://localhost:3001</span>   <span class="m">→ Grafana (admin/admin)</span></pre>
+  </div>
+  <p style="margin-top: 20px; color: var(--muted); font-size: 13px;">
+    Full prerequisites, environment variables, and migration commands live in the repo's <a href="https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform#quick-start" style="color: var(--cyan);">README</a>.
+  </p>
+</section>
+
+<!-- CTA -->
+<section id="cta">
+  <div class="section-head fade-up">
+    <span class="num">08 /</span>
+    <h2>Dig deeper.</h2>
+  </div>
+  <div class="cta-row fade-up">
+    <a href="https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform" target="_blank" rel="noopener" class="btn-primary">GitHub repo →</a>
+    <a href="https://youtu.be/TODO" target="_blank" rel="noopener" class="btn-ghost">▶ 60s demo video</a>
+    <a href="../index.html" class="btn-ghost">← other projects</a>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div class="brand">bharath<span class="accent">.kondur</span> · 2026</div>
+    <div class="meta">CV / LLM Engineer · Open to smart-city &amp; ADAS roles (EU)</div>
+  </div>
+</footer>
+
+<script>
+  // custom cursor
+  const dot = document.querySelector('.cursor-dot');
+  const ring = document.querySelector('.cursor-ring');
+  let rx = 0, ry = 0, tx = 0, ty = 0;
+  document.addEventListener('mousemove', (e) => {
+    tx = e.clientX; ty = e.clientY;
+    dot.style.transform = `translate(${tx}px, ${ty}px) translate(-50%, -50%)`;
+  });
+  (function raf() {
+    rx += (tx - rx) * 0.15;
+    ry += (ty - ry) * 0.15;
+    ring.style.transform = `translate(${rx}px, ${ry}px) translate(-50%, -50%)`;
+    requestAnimationFrame(raf);
+  })();
+  document.querySelectorAll('a, button, .tech-card, .feature, .pillar').forEach(el => {
+    el.addEventListener('mouseenter', () => ring.classList.add('hover'));
+    el.addEventListener('mouseleave', () => ring.classList.remove('hover'));
+  });
+
+  // fade-up on scroll
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.fade-up').forEach(el => io.observe(el));
+
+  // video placeholder click → YouTube (replace VIDEO_ID once recorded)
+  const ph = document.getElementById('video-placeholder');
+  if (ph) {
+    ph.addEventListener('click', () => {
+      window.open('https://youtu.be/TODO', '_blank', 'noopener');
+    });
+  }
+</script>
+
+</body>
+</html>

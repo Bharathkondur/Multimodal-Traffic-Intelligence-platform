@@ -520,3 +520,108 @@ class TrafficReport(Base):
             f"TrafficReport(id={self.id}, session_id={self.session_id}, "
             f"report_type={self.report_type})"
         )
+
+
+# ---------------------------------------------------------------------------
+# Scene Intelligence — watchlist rules, alerts, and monitoring zones
+# ---------------------------------------------------------------------------
+
+
+class WatchRule(Base):
+    """
+    A user-authored watchlist rule. One row = one rule.
+
+    Rules are attached to a single session. Raw text is preserved so the
+    user can see exactly what they typed; ``predicate`` stores the
+    compiled structured form.
+    """
+
+    __tablename__ = "watch_rules"
+
+    id = Column(String(36), primary_key=True)
+    session_id = Column(
+        String(36),
+        ForeignKey("traffic_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name = Column(String(200), nullable=False)
+    raw_text = Column(Text, nullable=False)
+    predicate = Column(JSON, nullable=True)
+    enabled = Column(Boolean, nullable=False, default=True)
+    severity = Column(String(20), nullable=False, default="info")
+    cooldown_s = Column(Float, nullable=False, default=15.0)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, default=datetime.utcnow
+    )
+
+    __table_args__ = (
+        Index("ix_watch_rules_session_id", "session_id"),
+        Index("ix_watch_rules_enabled", "enabled"),
+    )
+
+
+class Alert(Base):
+    """
+    Historical record of a fired rule.
+
+    Snapshots are stored as base64 JPEG blobs in a separate column so
+    they can be lazy-loaded; the rest of the row is light enough to
+    scan for history views.
+    """
+
+    __tablename__ = "alerts"
+
+    id = Column(String(36), primary_key=True)
+    session_id = Column(
+        String(36),
+        ForeignKey("traffic_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    rule_id = Column(
+        String(36),
+        ForeignKey("watch_rules.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    rule_name = Column(String(200), nullable=False)
+    severity = Column(String(20), nullable=False, default="info")
+    reason = Column(Text, nullable=True)
+    zone_id = Column(String(100), nullable=True)
+    frame_id = Column(Integer, nullable=True)
+    timestamp = Column(
+        DateTime(timezone=True), nullable=False, default=datetime.utcnow
+    )
+    matched_objects = Column(JSON, nullable=True)
+    snapshot_b64 = Column(Text, nullable=True)
+
+    __table_args__ = (
+        Index("ix_alerts_session_id", "session_id"),
+        Index("ix_alerts_rule_id", "rule_id"),
+        Index("ix_alerts_timestamp", "timestamp"),
+        Index("ix_alerts_severity", "severity"),
+    )
+
+
+class MonitorZone(Base):
+    """
+    A user-drawn polygon zone for scoping rules to a region of frame.
+    Coordinates are in 1280×720 stream-space so they match the overlay.
+    """
+
+    __tablename__ = "monitor_zones"
+
+    id = Column(String(100), primary_key=True)
+    session_id = Column(
+        String(36),
+        ForeignKey("traffic_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name = Column(String(120), nullable=False)
+    points = Column(JSON, nullable=False)   # [[x, y], ...]
+    color = Column(String(20), nullable=True)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, default=datetime.utcnow
+    )
+
+    __table_args__ = (
+        Index("ix_monitor_zones_session_id", "session_id"),
+    )

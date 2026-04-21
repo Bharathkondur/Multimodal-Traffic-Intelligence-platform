@@ -218,7 +218,7 @@ async def start_stream(
     Start live stream processing from RTSP camera or webcam.
 
     Features:
-        - Support for RTSP streams and webcam input
+        - Support for RTSP, HTTP, and YouTube / video-URL inputs (webcam on request)
         - Configurable frame rate
         - Real-time detection and incident alerts
     """
@@ -238,12 +238,14 @@ async def start_stream(
             source=request.stream_url,
         )
 
-        # Start stream pipeline in background
+        # Start stream pipeline in background.
+        # NOTE: fps is passed by keyword — positional order would land it on
+        # `settings` and crash on settings.model_path.
         background_tasks.add_task(
             start_stream_pipeline,
             session["id"],
             request.stream_url,
-            request.fps,
+            fps=request.fps,
         )
 
         now = datetime.utcnow()

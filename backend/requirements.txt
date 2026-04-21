@@ -24,6 +24,7 @@ aiofiles==23.2.1
 redis==5.0.1
 aioredis==2.0.1
 httpx==0.25.2
+yt-dlp>=2024.11.18
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 pillow==10.1.0

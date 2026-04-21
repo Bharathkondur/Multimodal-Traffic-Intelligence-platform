@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: traffic-backend
+    container_name: scene-intel-backend
     ports:
       - "8000:8000"
     environment:
@@ -35,7 +35,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - traffic-net
+      - scene-intel-net
     restart: unless-stopped
     mem_limit: 2g
     healthcheck:
@@ -49,14 +49,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    container_name: traffic-frontend
+    container_name: scene-intel-frontend
     ports:
       - "3000:80"
     depends_on:
       backend:
         condition: service_healthy
     networks:
-      - traffic-net
+      - scene-intel-net
     restart: unless-stopped
     mem_limit: 512m
     healthcheck:
@@ -68,7 +68,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: traffic-postgres
+    container_name: scene-intel-postgres
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -80,7 +80,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
-      - traffic-net
+      - scene-intel-net
     restart: unless-stopped
     mem_limit: 1g
     healthcheck:
@@ -93,13 +93,13 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: traffic-redis
+    container_name: scene-intel-redis
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
     networks:
-      - traffic-net
+      - scene-intel-net
     restart: unless-stopped
     mem_limit: 512m
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
@@ -111,7 +111,7 @@ services:
 
   grafana:
     image: grafana/grafana:latest
-    container_name: traffic-grafana
+    container_name: scene-intel-grafana
     ports:
       - "3001:3000"
     environment:
@@ -135,7 +135,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - traffic-net
+      - scene-intel-net
     restart: unless-stopped
     mem_limit: 512m
     healthcheck:
@@ -146,7 +146,7 @@ services:
       start_period: 30s
 
 networks:
-  traffic-net:
+  scene-intel-net:
     driver: bridge
 
 volumes:

@@ -157,6 +157,13 @@ class StreamProcessor:
         zone_analytics=None,
         db_factory=None,
         ocr_reader=None,
+        pose_estimator=None,
+        pose_classifier=None,
+        pose_frame_interval: int = 3,
+        captioner=None,
+        monitor=None,
+        on_caption: Optional[Callable] = None,
+        on_alert: Optional[Callable] = None,
     ) -> None:
         """
         Initialize the stream processor.
@@ -189,10 +196,23 @@ class StreamProcessor:
         self.ocr_reader = ocr_reader
         self._ocr_frame_counter = 0  # only run OCR every N frames for performance
 
+        # Scene Intelligence additions ------------------------------------
+        self.pose_estimator = pose_estimator
+        self.pose_classifier = pose_classifier
+        self.pose_frame_interval = max(1, int(pose_frame_interval))
+        self._pose_frame_counter = 0
+        self._last_poses: List[Dict[str, Any]] = []  # cached between pose frames
+        self.captioner = captioner
+        self.monitor = monitor
+        self._last_caption_ts = 0.0
+        self._last_frame: Optional[np.ndarray] = None  # for captioner/snapshots
+
         # Callbacks
         self.on_detection = on_detection
         self.on_incident = on_incident
         self.on_metrics = on_metrics
+        self.on_caption = on_caption
+        self.on_alert = on_alert
 
         # State management
         self._running = False
@@ -384,6 +404,25 @@ class StreamProcessor:
                 detections = await self._run_detection(frame_data["frame"])
 
                 frame_data["detections"] = detections
+                self._last_frame = frame_data.get("frame")
+
+                # Pose estimation — every N frames, only if we have people.
+                poses = await self._maybe_run_pose(
+                    frame_data.get("frame"),
+                    detections,
+                )
+                frame_data["poses"] = poses
+
+                # Fire-and-forget: live captioning + rule evaluation.
+                # Both are gated by their own configs and cooldowns.
+                if self.captioner is not None:
+                    asyncio.create_task(
+                        self._maybe_caption(frame_data, detections, poses)
+                    )
+                if self.monitor is not None and (detections or poses):
+                    asyncio.create_task(
+                        self._run_monitor(frame_data, detections, poses)
+                    )
 
                 # Update metrics
                 self.metrics.processed_frames += 1
@@ -425,6 +464,9 @@ class StreamProcessor:
                         await self.on_detection(frame_data, detections, frame_b64)
                     except Exception as e:
                         logger.error(f"Error in on_detection callback: {e}")
+                # Attach poses to the downstream queue payload so the
+                # tracking/incident stages can see action labels.
+                frame_data["poses"] = poses
 
                 # Queue for tracking
                 try:
@@ -597,6 +639,161 @@ class StreamProcessor:
 
         except Exception as e:
             logger.error(f"Error flushing batch writes to database: {e}")
+
+    # ------------------------------------------------------------------
+    # Scene Intelligence: pose / captioning / rule monitor
+    # ------------------------------------------------------------------
+    async def _maybe_run_pose(
+        self,
+        frame: Optional[np.ndarray],
+        detections: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Run YOLO-pose every N frames. Returns pose dicts or cached ones."""
+        if self.pose_estimator is None or frame is None:
+            return []
+
+        # Skip if no people in the frame — pose is a pure cost otherwise.
+        has_person = any(
+            (d.get("class_name") or d.get("type") or "").lower() == "person"
+            for d in detections
+        )
+        if not has_person:
+            self._last_poses = []
+            return []
+
+        self._pose_frame_counter += 1
+        if self._pose_frame_counter % self.pose_frame_interval != 0:
+            return self._last_poses
+
+        try:
+            loop = asyncio.get_event_loop()
+            poses = await loop.run_in_executor(
+                None, self.pose_estimator.estimate, frame
+            )
+            # Match pose to track_id by bbox IoU (best-effort).
+            person_dets = [
+                d for d in detections
+                if (d.get("class_name") or d.get("type") or "").lower() == "person"
+            ]
+            for p in poses:
+                tid = self._match_track_id(p.bbox, person_dets)
+                if self.pose_classifier is not None:
+                    self.pose_classifier.update_and_classify(p, tid)
+                else:
+                    p.track_id = tid
+            pose_dicts = [p.to_dict() for p in poses]
+            self._last_poses = pose_dicts
+
+            # Tag action back onto the matching detection dict so the
+            # frontend overlay can render it next to the class label.
+            for pose in pose_dicts:
+                tid = pose.get("track_id")
+                action = pose.get("action")
+                if not action or action == "unknown":
+                    continue
+                for det in detections:
+                    if det.get("track_id") == tid:
+                        det["action"] = action
+                        det["action_confidence"] = pose.get("action_confidence")
+                        break
+            return pose_dicts
+        except Exception as e:
+            logger.debug(f"Pose stage error: {e}")
+            return self._last_poses
+
+    @staticmethod
+    def _match_track_id(
+        pose_bbox: tuple,
+        person_dets: List[Dict[str, Any]],
+    ) -> Optional[int]:
+        """Pick the person-detection with highest IoU to this pose bbox."""
+        best_iou = 0.0
+        best_tid: Optional[int] = None
+        px1, py1, px2, py2 = pose_bbox
+        p_area = max(0.0, (px2 - px1) * (py2 - py1))
+        if p_area <= 0:
+            return None
+        for det in person_dets:
+            bbox = det.get("bbox")
+            if not bbox or len(bbox) != 4:
+                continue
+            dx1, dy1, dx2, dy2 = bbox
+            ix1 = max(px1, dx1)
+            iy1 = max(py1, dy1)
+            ix2 = min(px2, dx2)
+            iy2 = min(py2, dy2)
+            if ix2 <= ix1 or iy2 <= iy1:
+                continue
+            inter = (ix2 - ix1) * (iy2 - iy1)
+            d_area = (dx2 - dx1) * (dy2 - dy1)
+            union = p_area + d_area - inter
+            iou = inter / union if union > 0 else 0.0
+            if iou > best_iou:
+                best_iou = iou
+                best_tid = det.get("track_id")
+        return best_tid if best_iou > 0.3 else None
+
+    async def _maybe_caption(
+        self,
+        frame_data: Dict[str, Any],
+        detections: List[Dict[str, Any]],
+        poses: List[Dict[str, Any]],
+    ) -> None:
+        """Invoke the VLM captioner every caption_interval_s at most."""
+        if self.captioner is None or self.on_caption is None:
+            return
+        now = time.time()
+        interval = getattr(self.captioner, "interval_s", 3.0)
+        if (now - self._last_caption_ts) < interval:
+            return
+        self._last_caption_ts = now
+
+        frame = frame_data.get("frame")
+        if frame is None:
+            return
+        try:
+            caption = await self.captioner.caption(frame, detections, poses)
+            if caption:
+                payload = {
+                    "caption": caption.get("text"),
+                    "summary": caption.get("summary"),
+                    "tags": caption.get("tags", []),
+                    "timestamp": (
+                        frame_data.get("timestamp").isoformat()
+                        if frame_data.get("timestamp") else None
+                    ),
+                    "frame_id": frame_data.get("frame_id"),
+                    "session_id": self._session_id,
+                }
+                await self.on_caption(payload)
+        except Exception as e:
+            logger.debug(f"Captioner error: {e}")
+
+    async def _run_monitor(
+        self,
+        frame_data: Dict[str, Any],
+        detections: List[Dict[str, Any]],
+        poses: List[Dict[str, Any]],
+    ) -> None:
+        """Evaluate active rules against this frame and emit alerts."""
+        if self.monitor is None or self.on_alert is None:
+            return
+        try:
+            alerts = await self.monitor.evaluate(
+                session_id=self._session_id,
+                detections=detections,
+                poses=poses,
+                frame=frame_data.get("frame"),
+                timestamp=frame_data.get("timestamp"),
+                frame_id=frame_data.get("frame_id"),
+            )
+            for alert in alerts or []:
+                try:
+                    await self.on_alert(alert)
+                except Exception as e:
+                    logger.debug(f"on_alert error: {e}")
+        except Exception as e:
+            logger.debug(f"Monitor error: {e}")
 
     async def _signal_pipeline_end(self) -> None:
         """Signal end of stream to all pipeline stages."""

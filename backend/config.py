@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     """
 
     # Application
-    app_name: str = "Multimodal Traffic Intelligence Platform"
+    app_name: str = "Multimodal Scene Intelligence Platform"
     debug: bool = False
 
     # Database
@@ -47,10 +47,13 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3"
     google_api_key: Optional[str] = None
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_vision_model: str = "gemini-2.5-flash"
 
-    # Model paths
-    model_path: str = "yolov8l.pt"
+    # Model paths — YOLO26 by default (Jan 2026, NMS-free, 43% faster CPU).
+    model_path: str = "yolo26s.pt"
+    yolo_model_path: str = "yolo26s.pt"          # alias for env YOLO_MODEL_PATH
+    yolo_pose_model_path: str = "yolo26s-pose.pt"
     easyocr_model_path: str = os.path.expanduser("~/.EasyOCR/model")
 
     # Upload configuration
@@ -58,8 +61,25 @@ class Settings(BaseSettings):
     max_upload_size: int = 5 * 1024 * 1024 * 1024  # 5GB
 
     # Detection configuration
-    detection_confidence_threshold: float = 0.5
-    max_detections_per_frame: int = 100
+    detection_confidence_threshold: float = 0.45
+    detection_iou_threshold: float = 0.45
+    max_detections_per_frame: int = 300
+
+    # Pose estimation (body keypoints for action heuristics)
+    pose_enabled: bool = True
+    pose_frame_interval: int = 3           # run pose every Nth detection frame
+
+    # Live scene captioning (VLM)
+    captioning_enabled: bool = True
+    caption_interval_s: float = 3.0        # how often to send a frame to the VLM
+    caption_max_tokens: int = 160
+    caption_include_pose: bool = True
+
+    # Rule engine / watchlist
+    rules_enabled: bool = True
+    max_rules_per_session: int = 20
+    alert_cooldown_s: float = 15.0         # minimum gap between alerts of the same rule
+    alert_snapshot_quality: int = 70       # JPEG quality for stored alert snapshots
 
     # CORS configuration
     cors_origins: List[str] = [

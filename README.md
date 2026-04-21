@@ -1,763 +1,178 @@
-# Multimodal Traffic Intelligence Platform
+<h1 align="center">Scene Intelligence Platform</h1>
 
-[![Build Status](https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-brightgreen.svg)](https://www.docker.com/)
+<p align="center">
+  <em>Real-time multimodal scene understanding — 80-class detection, pose-based action recognition, live VLM narration, and natural-language watchlist rules over any RTSP, YouTube, HTTP, or uploaded video.</em>
+</p>
 
-## Dashboard Preview
+<p align="center">
+  <sub>(Originally built for traffic; now a general scene-monitoring platform. Repo name unchanged for history.)</sub>
+</p>
 
-![Multimodal Traffic Intelligence Dashboard](docs/dashboard-preview.svg)
+<p align="center">
+  <a href="https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform/actions"><img src="https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.11+-1e6fff.svg" alt="Python"></a>
+  <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-ready-00d4ff.svg" alt="Docker"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-f5a623.svg" alt="MIT"></a>
+</p>
 
-## Overview
+<p align="center">
+  <!-- TODO: replace with recorded hero GIF (see docs/RECORDING_GUIDE.md) -->
+  <img src="docs/dashboard-preview.svg" alt="Dashboard preview" width="100%">
+</p>
 
-The Multimodal Traffic Intelligence Platform is a real-time intelligent video analysis system that goes beyond detection. It combines computer vision and natural language reasoning to understand traffic scenes at scale.
+<p align="center">
+  <strong><a href="https://youtu.be/TODO">▶ Watch the 60-second demo</a></strong> &nbsp;·&nbsp;
+  <strong><a href="https://bharathkondur.github.io/projects/multimodal-traffic-intelligence.html">Project page</a></strong> &nbsp;·&nbsp;
+  <strong><a href="#quick-start">Quick start</a></strong>
+</p>
 
-**Two AI layers working together:**
+---
 
-1. **Vision Layer**: OpenCV-based stream processing with YOLOv8 for multi-object detection, plate recognition, and incident identification
-2. **Reasoning Layer**: LangGraph-powered agent that performs RAG (Retrieval-Augmented Generation) over detection events, queries patterns, and generates natural-language reports
+## What it does
 
-Upload a video, get detections with real-time dashboards, ask questions about the scene, receive intelligent shift reports. All from a single integrated platform.
+Point it at a camera or a video and it tells you, in real time, **what is moving, where, how fast, and what just went wrong** — and lets you ask follow-up questions in natural language.
 
-### Key Capabilities
+- **Detection** — YOLOv8 over every frame, multi-class (car, truck, bus, motorcycle, bicycle, person).
+- **Tracking** — DeepSORT with persistent track IDs across occlusion.
+- **ANPR** — EasyOCR-based license plate extraction every 3rd frame per detection.
+- **Incident detection** — stopped-vehicle, congestion, crowd, and collision heuristics running concurrently.
+- **Live streaming** — RTSP, RTMP, HTTP(S), YouTube (resolved via yt-dlp), webcam, or uploaded MP4/WebM/MOV.
+- **Chat-over-data** — Gemini-backed agent answers natural-language questions against live detections and incidents (*"How many trucks went through between 14:00 and 14:15?"*).
+- **Dashboard** — React + Tailwind UI with live frame overlay, running metrics, Recharts timelines, and an incidents log.
 
-- Real-time vehicle, pedestrian, and cyclist detection and tracking
-- Automatic license plate recognition and extraction
-- Intelligent incident detection (stopped vehicles, congestion, crowd formations, accidents)
-- Natural language Q&A over detection data
-- Automated shift report generation with actionable insights
-- Live WebSocket streaming to React dashboard
-- Configurable LLM backend (OpenAI GPT-4o or Ollama for local inference)
-- Production-ready Grafana analytics dashboards
-- One-command Docker Compose deployment
+## Demo
 
-## Demo Flow
+[![60-second demo](https://img.youtube.com/vi/TODO/maxresdefault.jpg)](https://youtu.be/TODO)
 
+*Click to watch — unlisted YouTube, no audio track required.*
+
+## Quick start
+
+One command, three services, no manual setup:
+
+```bash
+git clone https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform.git
+cd Multimodal-Traffic-Intelligence-platform
+cp .env.example .env          # add your GOOGLE_API_KEY for chat (optional)
+docker compose up --build
 ```
-1. Upload Video
-   └─> Video ingested and queued for processing
 
-2. Real-Time Detection Pipeline
-   ├─> Stream decomposed into frames (configurable skip rate)
-   ├─> YOLOv8 detects vehicles, pedestrians, cyclists, animals
-   ├─> DeepSORT tracker maintains object identities across frames
-   ├─> Plate reader extracts license plates from vehicles
-   └─> Event stream persisted to PostgreSQL
+Then open:
 
-3. Incident Detection
-   ├─> Stopped vehicle detector identifies stationary objects
-   ├─> Congestion analyzer detects traffic flow issues
-   ├─> Crowd detector identifies gatherings
-   └─> Accident classifier flags collision patterns
+| URL | What it is |
+|---|---|
+| `http://localhost:3000` | React dashboard |
+| `http://localhost:8000/docs` | FastAPI OpenAPI (Swagger) |
+| `http://localhost:3001` | Grafana (admin / admin) |
 
-4. Live Dashboard (React + WebSocket)
-   ├─> Frame-by-frame detection visualization
-   ├─> Real-time metrics (vehicles/min, incidents/session)
-   ├─> Interactive filters and timeline scrubbing
-   └─> Chat interface for Q&A
+Try a stream:
 
-5. Ask Questions
-   ├─> Natural language query: "How many vehicles passed between minute 5 and 10?"
-   ├─> Agent retrieves relevant detection events from PostgreSQL
-   ├─> RAG context built from event data
-   ├─> LLM analyzes pattern and generates response
-   └─> Answer returned with confidence and supporting data
-
-6. Generate Reports
-   ├─> Automatic shift report: "Traffic Summary for [Date]"
-   ├─> Statistics: vehicle counts, incident frequency, peak times
-   ├─> Insights: congestion patterns, anomalies detected
-   ├─> Exportable as PDF/JSON
-   └─> Stored in database for audit trail
-```
+1. Paste an RTSP URL, a YouTube link, or upload a video on the **Add Source** panel.
+2. Watch detections, plates, tracks, and metrics stream into the dashboard.
+3. Ask the chat pane *"summarise the last five minutes"*.
 
 ## Architecture
 
-```
-VIDEO INPUT
-    |
-    v
-OpenCV Stream Processor
-    |
-    +-----> YOLOv8 Detector (torch-based, GPU-optimized)
-    |           |
-    |           v
-    |       Detection Results
-    |           |
-    |           +-----> Object Tracker (DeepSORT)
-    |           |           |
-    |           |           v
-    |           |       Tracked Objects
-    |           |
-    |           +-----> Plate Reader (EasyOCR)
-    |               |
-    |               v
-    |           License Plates
-    |
-    +-----> Incident Detector
-                |
-                +-----> Stopped Vehicle Analyzer
-                +-----> Congestion Analyzer
-                +-----> Crowd Detector
-                +-----> Accident Classifier
-                        |
-                        v
-                    Incident Events
-
-
-All Events & Detections
-    |
-    v
-PostgreSQL Event Store (Persistence Layer)
-    |
-    +-----> Detection Table (frame-by-frame)
-    +-----> Incident Table
-    +-----> Session Table
-    +-----> Plate Table
-    +-----> Metrics Table
-    |
-    v
-Redis Cache (Recent events, session data)
-
-
-User Interaction Layer
-    |
-    +-----> React Dashboard (WebSocket client)
-    |           |
-    |           v
-    |       Live Detection Visualization
-    |       Real-time Metrics
-    |       Timeline Controls
-    |
-    +-----> FastAPI Backend (REST + WebSocket)
-    |           |
-    |           +-----> /sessions/* (manage video sessions)
-    |           +-----> /detections/* (retrieve detection data)
-    |           +-----> /incidents/* (query incidents)
-    |           +-----> /chat (natural language Q&A)
-    |           +-----> /reports (shift reports)
-    |           +-----> /metrics (analytics)
-    |
-    +-----> LangGraph Agent
-                |
-                +-----> RAG System (vector search over events)
-                +-----> Tool Definitions
-                |       ├─ query_detections
-                |       ├─ query_incidents
-                |       ├─ get_metrics
-                |       ├─ temporal_analysis
-                |       └─ generate_insights
-                |
-                +-----> LLM (OpenAI or Ollama)
-                        |
-                        v
-                    Natural Language Responses
-
-
-Analytics & Monitoring
-    |
-    +-----> Grafana Dashboards
-    |       ├─ Vehicle Flow (time-series)
-    |       ├─ Incident Timeline
-    |       ├─ Peak Hours Analysis
-    |       └─ System Health
-    |
-    +-----> Prometheus Metrics
-            ├─ Processing throughput
-            ├─ Detection latency
-            ├─ Error rates
-            └─ Resource usage
+```mermaid
+flowchart LR
+  subgraph Ingest
+    A[RTSP / HTTP / YouTube / Video file]
+  end
+  subgraph Pipeline[6-stage async pipeline]
+    A --> B[Frame extraction<br/>OpenCV]
+    B --> C[Detection<br/>YOLOv8]
+    C --> D[Tracking<br/>DeepSORT]
+    C --> E[ANPR<br/>EasyOCR]
+    D --> F[Incident detection]
+    E --> G[Batch DB writes<br/>every 5s]
+    F --> G
+    D --> H[Metrics broadcast<br/>every 1s]
+  end
+  subgraph Transport
+    H --> I[WebSocket]
+    G --> J[(PostgreSQL)]
+    G --> K[(Redis)]
+  end
+  subgraph Frontend[React dashboard]
+    I --> L[Live frame + overlays]
+    I --> M[Metrics panel]
+    J --> N[Chat agent<br/>Gemini / LangGraph]
+    N --> O[Chat pane]
+  end
 ```
 
-## Tech Stack
+Six asyncio stages run concurrently per session: **frame extraction → detection → tracking → incident detection → metrics broadcast → batched DB writes**, with a back-pressure cap of 100 frames on the detection queue. See `backend/stream/processor.py` for the core loop.
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| **Backend API** | FastAPI 0.104+ | RESTful endpoints + WebSocket streaming |
-| **Video Processing** | OpenCV 4.8+ | Stream decomposition, frame extraction |
-| **Object Detection** | YOLOv8 (PyTorch) | Real-time vehicle/pedestrian detection |
-| **Tracking** | DeepSORT | Multi-object tracking with identity persistence |
-| **Plate Recognition** | EasyOCR + TensorFlow | License plate extraction and text recognition |
-| **AI/Reasoning** | LangGraph + LangChain | Agentic RAG pipeline for Q&A |
-| **LLM Integration** | OpenAI GPT-4o / Ollama | Natural language understanding and generation |
-| **Database** | PostgreSQL 16 | Event store, session persistence, metrics |
-| **Cache** | Redis 7 | Real-time data cache, session state |
-| **Frontend** | React 18 + TypeScript | Interactive dashboard and UI |
-| **Visualization** | Recharts | Charts and analytics on dashboard |
-| **Analytics** | Grafana + Prometheus | Production monitoring and dashboards |
-| **Container Orchestration** | Docker Compose | Multi-service deployment |
-| **Web Server** | Nginx | Reverse proxy and static file serving |
-| **Async Runtime** | Uvicorn + asyncio | High-performance async request handling |
-| **ORM** | SQLAlchemy 2.0+ | Database abstraction and query building |
+## Tech stack
 
-## Features
+**Vision** YOLOv8 · DeepSORT · EasyOCR · OpenCV
+**Backend** FastAPI · asyncio · SQLAlchemy 2.0 (async) · asyncpg · Alembic
+**Data** PostgreSQL 16 · Redis 7
+**AI / Agents** LangGraph · LangChain · Gemini 2.5 Flash
+**Frontend** React 18 · Vite · TailwindCSS · Recharts · WebSocket
+**Ops** Docker Compose · Nginx · Grafana · Prometheus
+**Ingest** yt-dlp (YouTube URL resolution) · OpenCV VideoCapture (RTSP/HTTP/file)
 
-### Vision-Based Detection
-- **Multi-class detection**: Vehicles, pedestrians, cyclists, animals
-- **Real-time performance**: GPU-accelerated YOLOv8 inference
-- **Configurable confidence**: Adjustable detection thresholds per model
-- **Batch processing**: Handle up to 100 detections per frame
-- **Frame skipping**: Configurable frame skip rate to optimize throughput
+## Performance (laptop, CPU-only)
 
-### Tracking & Identity
-- **DeepSORT tracking**: Maintain object identity across video frames
-- **Occlusion handling**: Robust to temporary obstructions
-- **ID assignment**: Unique identifiers for vehicles across session
-- **Trail rendering**: Historical trajectory visualization on dashboard
+Measured on MacBook Pro M2 (no discrete GPU), 720p video:
 
-### License Plate Recognition
-- **Plate detection**: Specialized detector for plate regions
-- **OCR extraction**: EasyOCR-based text recognition
-- **Confidence scoring**: Validate extracted plate strings
-- **Database storage**: Searchable plate archive for queries
+| Metric | Value |
+|---|---|
+| Frame processing rate | 12–15 FPS |
+| End-to-end detection latency | 70–110 ms |
+| WebSocket frame rate to UI | 15 FPS @ 1280×720 JPEG q60 |
+| DB write amplification | 1 batch per 5 s (50 rows/batch) |
+| Sustained streams | 2 concurrent on M2, 4+ with GPU |
 
-### Incident Detection
-- **Stopped vehicles**: Identify stationary objects in traffic
-- **Congestion detection**: Cluster analysis for traffic density
-- **Crowd detection**: Identify pedestrian aggregations
-- **Anomaly flagging**: Alert on unusual patterns
+With a CUDA-capable GPU the detection stage drops to ~20 ms and you can run 6+ concurrent streams.
 
-### Intelligent Analysis Layer
-- **RAG pipeline**: Retrieve relevant events for context
-- **Vector embeddings**: Semantic search over detection events
-- **Tool-based reasoning**: Agent can query, filter, and analyze data
-- **Natural language**: Ask "What happened between minute 5-10?" get intelligent responses
-- **Incident analysis**: Automatic root cause analysis of detected incidents
+## Features at a glance
 
-### Reporting
-- **Shift reports**: Automated summaries per time period
-- **Export formats**: JSON and PDF output
-- **Customizable templates**: Define report structure
-- **Timestamp-aware**: Correlate with specific video timestamps
+| Category | Details |
+|---|---|
+| **Ingest** | RTSP / RTMP / HTTP(S) / YouTube (yt-dlp) / webcam / uploaded video |
+| **Detect** | 6 vehicle+pedestrian classes, configurable confidence threshold |
+| **Track** | Persistent DeepSORT IDs, trail rendering, re-identification across occlusion |
+| **Read** | License plate OCR (every 3rd frame per detection) with confidence scoring |
+| **Alert** | Stopped vehicles, congestion, crowd, accident heuristics |
+| **Query** | LLM chat bound to live detection context (Gemini backend) |
+| **Store** | Append-only event log in Postgres, 5 s batched writes |
+| **Show** | React dashboard with live overlays, running metrics, incident timeline |
+| **Monitor** | Grafana dashboards + Prometheus metrics out of the box |
 
-### Real-Time Streaming
-- **WebSocket integration**: Live dashboard updates
-- **Frame delivery**: Send annotated frames to clients
-- **Metric streaming**: Push metrics as they're computed
-- **Scalable design**: Multiple concurrent WebSocket clients
-
-### Monitoring & Analytics
-- **Grafana dashboards**: Pre-configured visualization templates
-- **Prometheus metrics**: Detection throughput, latency, error rates
-- **Health checks**: Service health endpoints
-- **Performance tracking**: Frame processing rate, GPU utilization
-
-## Quick Start
-
-### Prerequisites
-- Docker & Docker Compose (recommended)
-- Python 3.11+ (for local development)
-- GPU with CUDA support (optional, for faster inference)
-
-### Using Docker Compose (Recommended)
-
-1. Clone the repository:
-```bash
-git clone https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform.git
-cd "Multimodal-Traffic-Intelligence-platform"
-```
-
-2. Set up environment:
-```bash
-cp .env.example .env
-# Edit .env with your configuration (API keys, passwords, etc.)
-```
-
-3. Start all services:
-```bash
-docker-compose up -d
-```
-
-4. Initialize database:
-```bash
-docker-compose exec backend python -m backend.database.init_db
-```
-
-5. Open dashboard:
-```
-Frontend: http://localhost:3000
-Grafana: http://localhost:3001 (admin/admin_password_change_me)
-API Docs: http://localhost:8000/docs
-```
-
-6. Upload a video:
-   - Navigate to http://localhost:3000
-   - Click "Upload Video"
-   - Select an MP4, AVI, or MOV file
-   - Wait for processing (watch dashboard for real-time updates)
-
-7. Query the results:
-   - Use the chat interface on dashboard
-   - Try: "How many vehicles were detected?"
-   - Or: "Summarize any incidents"
-
-### Local Development (without Docker)
-
-1. Install Python dependencies:
-```bash
-pip install -e ".[dev]"
-pip install -r backend/agents/requirements.txt
-```
-
-2. Start PostgreSQL and Redis:
-```bash
-docker-compose up postgres redis -d
-```
-
-3. Initialize database:
-```bash
-python backend/database/init_db.py
-```
-
-4. Start backend:
-```bash
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-5. In another terminal, start frontend:
-```bash
-cd frontend
-npm install
-npm start
-```
-
-## API Reference
-
-### Session Management
-
-**POST /api/v1/sessions/upload**
-- Upload video file and start processing
-- Parameters: `file` (video), `name` (optional session name)
-- Returns: Session ID, status, estimated processing time
-
-**GET /api/v1/sessions/{session_id}**
-- Retrieve session details and metadata
-- Returns: Session info, progress, detection count, incident count
-
-**GET /api/v1/sessions**
-- List all sessions with pagination
-- Query parameters: `skip`, `limit`, `status` (processing/completed/failed)
-- Returns: Paginated session list
-
-**DELETE /api/v1/sessions/{session_id}**
-- Delete session and associated data
-- Returns: Confirmation
-
-### Detection Data
-
-**GET /api/v1/detections/{session_id}**
-- Retrieve all detections for a session
-- Query parameters: `frame_range`, `class_filter`, `confidence_threshold`
-- Returns: List of detection objects with bounding boxes, confidence, class
-
-**GET /api/v1/detections/{session_id}/vehicles**
-- Get vehicle detections only (filtered)
-- Parameters: `min_confidence`, `pagination`
-- Returns: Vehicle detection list with tracking IDs
-
-**GET /api/v1/detections/{session_id}/frame/{frame_number}**
-- Get all detections for a specific frame
-- Returns: Detections at that frame timestamp
-
-### Incidents
-
-**GET /api/v1/incidents/{session_id}**
-- Retrieve all detected incidents
-- Query parameters: `type` (stopped/congestion/crowd/accident), `severity`
-- Returns: Incident list with timestamps and locations
-
-**GET /api/v1/incidents/{session_id}/timeline**
-- Get incidents with timeline visualization data
-- Returns: Incident events ordered by timestamp
-
-### Analytics
-
-**GET /api/v1/metrics/{session_id}**
-- Get session-wide metrics
-- Returns: Total vehicles, total pedestrians, incident count, peak hour data
-
-**GET /api/v1/metrics/{session_id}/timeline**
-- Get time-series metric data
-- Returns: Vehicle count per minute, incident frequency per minute
-
-### Chat & Q&A
-
-**POST /api/v1/chat**
-- Natural language query over detection data
-- Request body: `session_id`, `query`, `context_window` (optional)
-- Returns: `response`, `confidence`, `supporting_data`
-
-Example:
-```json
-{
-  "session_id": "sess_abc123",
-  "query": "How many vehicles passed through in the first 5 minutes?",
-  "context_window": 300
-}
-```
-
-### Reports
-
-**POST /api/v1/reports/generate**
-- Generate shift report
-- Request body: `session_id`, `format` (json/pdf), `include_visuals` (bool)
-- Returns: Report content or file URL
-
-**GET /api/v1/reports/{report_id}**
-- Retrieve previously generated report
-- Returns: Report content (JSON or PDF)
-
-### Health & Status
-
-**GET /api/v1/health**
-- Service health check
-- Returns: `status`, `version`, `uptime`, `dependencies`
-
-## Project Structure
+## Repository layout
 
 ```
-.
-├── backend/                          # Python backend application
-│   ├── __init__.py
-│   ├── main.py                      # FastAPI app entry point
-│   ├── config.py                    # Configuration and settings
-│   ├── api/                         # REST endpoint definitions
-│   │   ├── routes.py               # Session, detection, incident routes
-│   │   ├── websocket_routes.py     # WebSocket streaming endpoints
-│   │   ├── schemas.py              # Pydantic request/response models
-│   │   └── __init__.py
-│   ├── detection/                   # Computer vision pipeline
-│   │   ├── detector.py             # YOLOv8 inference wrapper
-│   │   ├── tracker.py              # DeepSORT multi-object tracking
-│   │   ├── plate_reader.py         # License plate OCR
-│   │   ├── incident_detector.py    # Incident detection logic
-│   │   └── __init__.py
-│   ├── stream/                      # Video stream processing
-│   │   ├── processor.py            # OpenCV stream handler
-│   │   ├── frame_extractor.py      # Frame extraction from video
-│   │   └── __init__.py
-│   ├── agents/                      # LangGraph RAG agent
-│   │   ├── graph.py                # Agent graph definition
-│   │   ├── rag.py                  # RAG system and retrieval
-│   │   ├── tools.py                # Tool definitions for agent
-│   │   ├── prompts.py              # LLM prompt templates
-│   │   ├── config.py               # Agent configuration
-│   │   └── __init__.py
-│   ├── database/                    # PostgreSQL persistence
-│   │   ├── models.py               # SQLAlchemy ORM models
-│   │   ├── connection.py           # Database connection pool
-│   │   ├── queries.py              # Query helpers and operations
-│   │   ├── init_db.py              # Schema initialization
-│   │   └── __init__.py
-│   ├── tests/                       # Unit and integration tests
-│   │   ├── test_detector.py
-│   │   ├── test_tracker.py
-│   │   ├── test_api.py
-│   │   └── __init__.py
-│   └── requirements.txt             # Python dependencies
-├── frontend/                        # React TypeScript dashboard
-│   ├── public/
-│   ├── src/
-│   │   ├── components/             # React components
-│   │   │   ├── Dashboard.tsx
-│   │   │   ├── VideoUpload.tsx
-│   │   │   ├── DetectionView.tsx
-│   │   │   ├── Chat.tsx
-│   │   │   ├── Metrics.tsx
-│   │   │   └── Reports.tsx
-│   │   ├── hooks/                  # Custom React hooks
-│   │   ├── services/               # API client services
-│   │   ├── types/                  # TypeScript interfaces
-│   │   ├── App.tsx
-│   │   └── index.tsx
-│   ├── package.json
-│   └── tsconfig.json
-├── grafana/                         # Grafana configuration
-│   ├── provisioning/
-│   │   ├── datasources/            # PostgreSQL + Prometheus datasources
-│   │   └── dashboards/             # Dashboard definitions
-│   └── dashboards/
-│       ├── traffic_overview.json
-│       ├── incidents_timeline.json
-│       └── system_health.json
-├── postgres/                        # PostgreSQL initialization
-│   └── init.sql                    # Schema and initial data
-├── db/                              # Database migration scripts
-│   ├── migrations/
-│   └── seeds/
-├── docker-compose.yml              # Multi-service orchestration
-├── docker-compose.dev.yml          # Development configuration
-├── Dockerfile.backend              # Backend image build
-├── Dockerfile.frontend             # Frontend image build
-├── nginx.conf                      # Nginx reverse proxy config
-├── pyproject.toml                  # Python project metadata
-├── requirements.txt                # Top-level Python dependencies
-├── Makefile                        # Development task automation
-├── .env.example                    # Environment template
-├── .github/
-│   └── workflows/
-│       └── ci.yml                 # GitHub Actions CI/CD pipeline
-├── QUICKSTART.md                  # Quick start guide
-├── INFRASTRUCTURE.md              # Detailed infrastructure docs
-├── DATABASE_ARCHITECTURE.md       # Database schema documentation
-└── README.md                      # This file
+backend/            FastAPI app, async pipeline, DB, agents
+  api/              REST + WebSocket routes, Pydantic schemas
+  detection/        YOLOv8 detector, DeepSORT tracker, ANPR
+  stream/           StreamProcessor (the 6-stage async loop)
+  processing/       Detection + stream pipeline entry points
+  agents/           LangGraph RAG agent + tools
+  database/         SQLAlchemy models, Alembic migrations
+frontend/           React + Vite dashboard
+grafana/            Dashboards + datasources
+docker-compose.yml  One-command local stack
+docs/               Strategy, demo script, recording guide
 ```
 
-## Configuration
+## Roadmap
 
-### Environment Variables
+- [x] RTSP / YouTube / HTTP live ingest (see `backend/processing/stream.py`)
+- [x] EasyOCR ANPR integrated into the detection stage
+- [x] LLM chat-over-data with Gemini
+- [ ] Multi-camera fused view
+- [ ] ONNX / TensorRT export for ~3× inference speedup
+- [ ] Plate-match watchlist alerts
+- [ ] Horizontal scaling via Redis pub/sub fan-out
 
-Key configuration parameters in `.env`:
+## Built by
 
-**Database**
-```bash
-DB_USER=traffic_admin
-DB_PASSWORD=secure_password_change_me
-DB_NAME=traffic_intelligence
-DB_HOST=postgres
-DB_PORT=5432
-```
+**Bharath Kumar Kondur** — CV/LLM engineer, 2 yrs working on plate detection + multi-object tracking. Open to smart-city, ADAS, and production-CV roles in the EU.
 
-**LLM Provider** (choose one)
-```bash
-LLM_PROVIDER=ollama                    # Use local Ollama
-# OR
-LLM_PROVIDER=openai
-OPENAI_API_KEY=sk-your-api-key-here
-```
-
-**YOLO Model**
-```bash
-YOLO_MODEL_SIZE=n                      # n (nano), s (small), m (medium), l (large), x (xlarge)
-DETECTION_CONFIDENCE=0.5               # Detection threshold (0.0-1.0)
-DETECTION_IOU_THRESHOLD=0.45           # Non-maximum suppression threshold
-```
-
-**Video Processing**
-```bash
-FRAME_SKIP_RATE=2                      # Process every Nth frame
-MAX_CONCURRENT_VIDEOS=3                # Parallel processing limit
-UPLOAD_MAX_SIZE=104857600              # Max file size (100MB default)
-```
-
-**Feature Flags**
-```bash
-ENABLE_VIDEO_PROCESSING=True
-ENABLE_REAL_TIME_ANALYSIS=True
-ENABLE_INCIDENT_DETECTION=True
-ENABLE_TRAFFIC_FLOW_ANALYSIS=True
-ENABLE_PREDICTIVE_ANALYTICS=False
-```
-
-See `.env.example` for complete reference.
-
-## Development
-
-### Setup Development Environment
-
-1. Clone and navigate to project:
-```bash
-git clone https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform.git
-cd "Multimodal-Traffic-Intelligence-platform"
-```
-
-2. Create virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install development dependencies:
-```bash
-pip install -e ".[dev]"
-pip install -r backend/agents/requirements.txt
-```
-
-4. Start services locally:
-```bash
-# Terminal 1: Start database services
-docker-compose up postgres redis grafana -d
-
-# Terminal 2: Backend
-cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# Terminal 3: Frontend
-cd frontend && npm start
-```
-
-5. Access development endpoints:
-   - Frontend: http://localhost:3000
-   - API Docs (Swagger): http://localhost:8000/docs
-   - API Docs (ReDoc): http://localhost:8000/redoc
-
-### Code Style & Linting
-
-```bash
-# Format code with Black
-black backend
-
-# Lint with Ruff
-ruff check backend --fix
-
-# Type checking with mypy
-mypy backend
-
-# All checks
-make lint
-```
-
-### Running Tests
-
-```bash
-# All tests
-pytest
-
-# Specific test file
-pytest backend/tests/test_detector.py
-
-# With coverage report
-pytest --cov=backend
-
-# Run specific test
-pytest backend/tests/test_detector.py::test_yolov8_inference
-```
-
-### Adding New Features
-
-1. **New Detection Model**: Implement in `backend/detection/` following detector.py pattern
-2. **New API Endpoint**: Add route in `backend/api/routes.py` with Pydantic schema
-3. **New Agent Tool**: Define in `backend/agents/tools.py` and register in graph
-4. **New Dashboard View**: Create React component in `frontend/src/components/`
-5. **Database Changes**: Add migration in `db/migrations/`, update models.py
-
-## Testing
-
-### Unit Tests
-```bash
-pytest backend/tests/test_detector.py -v
-pytest backend/tests/test_tracker.py -v
-pytest backend/tests/test_api.py -v
-```
-
-### Integration Tests
-```bash
-pytest backend/tests/test_integration.py -v
-```
-
-### Test Coverage
-```bash
-pytest --cov=backend --cov-report=html
-open htmlcov/index.html
-```
-
-### Load Testing
-```bash
-# Start services then:
-locust -f tests/load_test.py --host=http://localhost:8000
-```
-
-## Deployment
-
-### Production Docker Compose
-
-```bash
-# Using production compose file
-docker-compose -f docker-compose.yml up -d
-
-# View logs
-docker-compose logs -f backend
-
-# Scale services
-docker-compose up -d --scale backend=2 --scale frontend=2
-```
-
-### Kubernetes (Optional)
-
-```bash
-# Build images for registry
-docker build -f Dockerfile.backend -t your-registry/traffic-backend:latest .
-docker push your-registry/traffic-backend:latest
-
-docker build -f Dockerfile.frontend -t your-registry/traffic-frontend:latest .
-docker push your-registry/traffic-frontend:latest
-
-# Deploy with kubectl
-kubectl apply -f k8s/
-```
-
-### Environment Checklist
-
-- [ ] `.env` configured with production secrets
-- [ ] Database backups enabled in PostgreSQL
-- [ ] SSL/TLS certificates configured in Nginx
-- [ ] API rate limiting enabled
-- [ ] Monitoring and alerting configured
-- [ ] Log aggregation set up
-- [ ] Regular security updates scheduled
-- [ ] Database indices optimized for queries
-- [ ] Redis persistence enabled
-- [ ] Model files cached or CDN-served
-
-### Performance Tuning
-
-**PostgreSQL**
-- Index detection/incident queries by session_id, timestamp
-- Partition large tables by date
-- Enable connection pooling (pgBouncer)
-
-**Redis**
-- Set appropriate eviction policies for cache
-- Enable AOF (append-only file) for persistence
-- Monitor memory usage with `INFO memory`
-
-**YOLO Detection**
-- Use smaller model (nano/small) for real-time
-- Enable batch inference for higher throughput
-- GPU memory optimization with `torch.cuda.empty_cache()`
-
-**Frontend**
-- Enable gzip compression in Nginx
-- Code splitting for React bundle
-- Lazy load heavy components
-
-## Contributing
-
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/description`
-3. Make changes and add tests
-4. Run `make lint` and `make test`
-5. Commit with clear messages: `git commit -m "Add: Feature description"`
-6. Push and create Pull Request
+[Portfolio](https://bharathkondur.github.io/) · [LinkedIn](https://www.linkedin.com/in/bharathkondur/) · bharathkumarkondur@gmail.com
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Support & Community
-
-- **Issues**: [GitHub Issues](https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform/discussions)
-
-## Acknowledgments
-
-Built with:
-- YOLOv8 by Ultralytics
-- DeepSORT by Alex Bewley
-- FastAPI by Sebastián Ramírez
-- LangChain/LangGraph for agentic RAG
-- React by Facebook/Meta
-
-## Portfolio Note
-
-This project demonstrates expertise in:
-- Real-time computer vision pipelines (2+ years)
-- Multi-object tracking systems
-- License plate detection and recognition
-- LangGraph-based RAG architectures
-- FastAPI microservices
-- Full-stack development (Python + React + PostgreSQL)
-- Docker containerization and orchestration
-- Production-grade system design
+MIT — see [LICENSE](LICENSE).

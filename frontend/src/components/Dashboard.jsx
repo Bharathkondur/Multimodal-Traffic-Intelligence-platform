@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { AlertCircle, Grid3x3, List, Upload, X } from 'lucide-react'
+import { AlertCircle, Grid3x3, List, Upload, X, Eye, MessageSquare } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import VideoFeed from './VideoFeed'
 import MetricsPanel from './MetricsPanel'
 import ChatPanel from './ChatPanel'
 import IncidentLog from './IncidentLog'
 import UploadPanel from './UploadPanel'
+import LiveTranscript from './LiveTranscript'
+import WatchlistPanel from './WatchlistPanel'
+import AlertHistoryPanel from './AlertHistoryPanel'
 import { useDetections } from '../hooks/useDetections'
 import { useWebSocket } from '../hooks/useWebSocket'
 import api from '../services/api'
@@ -21,13 +24,20 @@ const Dashboard = ({ sessionId: initialSessionId = null, onSessionChange = null 
   const [showUpload, setShowUpload] = useState(false)
   const [sessionId, setSessionId] = useState(initialSessionId)
   const [metricsHistory, setMetricsHistory] = useState([])
+  // Scene Intelligence: toggle between the incident log (legacy) and
+  // the three new panels (watchlist / live transcript / alert history).
+  const [sceneSidebar, setSceneSidebar] = useState('scene')
 
   const {
     detections,
     incidents,
+    captions,
+    alerts,
     metrics,
     updateDetections,
     addIncident,
+    addCaption,
+    addAlert,
     updateMetrics,
     clearDetections
   } = useDetections()
@@ -58,6 +68,12 @@ const Dashboard = ({ sessionId: initialSessionId = null, onSessionChange = null 
     } else if (message.type === 'heatmap') {
       // Handle heatmap data if needed
       console.log('Heatmap update received')
+    } else if (message.type === 'caption') {
+      // Scene Intelligence: VLM narration (arrives every ~2s)
+      addCaption(message.data)
+    } else if (message.type === 'alert') {
+      // Scene Intelligence: rule-engine alerts
+      addAlert(message.data)
     } else if (message.type === 'frame') {
       if (message.data.frame_data) {
         const img = new Image()
@@ -65,7 +81,7 @@ const Dashboard = ({ sessionId: initialSessionId = null, onSessionChange = null 
         img.onload = () => setFrameData(img)
       }
     }
-  }, [updateDetections, addIncident, updateMetrics])
+  }, [updateDetections, addIncident, addCaption, addAlert, updateMetrics])
 
   // Sync when parent passes a new sessionId (e.g. from URL param)
   useEffect(() => {
@@ -88,6 +104,8 @@ const Dashboard = ({ sessionId: initialSessionId = null, onSessionChange = null 
       subscribe('detections')
       subscribe('incidents')
       subscribe('metrics')
+      subscribe('captions')
+      subscribe('alerts')
     }
   }, [isConnected, sessionId, subscribe])
 
@@ -144,7 +162,7 @@ const Dashboard = ({ sessionId: initialSessionId = null, onSessionChange = null 
       {/* Header */}
       <div className="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Traffic Intelligence Dashboard</h1>
+          <h1 className="text-2xl font-bold text-slate-100">Scene Intelligence Dashboard</h1>
           <div className="flex items-center gap-4 mt-1 text-sm">
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${statusColor} animate-pulse`}></span>
@@ -152,6 +170,16 @@ const Dashboard = ({ sessionId: initialSessionId = null, onSessionChange = null 
             </div>
             {sessionId && (
               <span className="text-slate-500 font-mono text-xs">Session: {sessionId.slice(0, 8)}...</span>
+            )}
+            {captions.length > 0 && (
+              <span className="text-cyan-400 font-mono text-xs flex items-center gap-1">
+                <MessageSquare className="w-3 h-3" /> {captions.length} captions
+              </span>
+            )}
+            {alerts.length > 0 && (
+              <span className="text-red-400 font-mono text-xs flex items-center gap-1">
+                <Eye className="w-3 h-3" /> {alerts.length} alerts
+              </span>
             )}
           </div>
         </div>
@@ -230,9 +258,18 @@ const Dashboard = ({ sessionId: initialSessionId = null, onSessionChange = null 
             </div>
           </div>
         ) : layoutMode === 'grid' ? (
-          // Grid layout: 2 columns, 2 rows
-          <div className="h-full p-4 gap-4 overflow-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gridTemplateRows: '1fr 1fr', gridAutoFlow: 'dense' }}>
-            {/* Top-left: Large Video Feed */}
+          // Scene Intelligence grid: video (2 cols tall) · metrics · watchlist/alerts tabs
+          //                                               · transcript · chat
+          <div
+            className="h-full p-4 gap-4 overflow-auto"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1.6fr 1fr 1fr',
+              gridTemplateRows: '1fr 1fr',
+              gridAutoFlow: 'dense',
+            }}
+          >
+            {/* Col 1: Large Video Feed — spans both rows */}
             <div className="min-h-0 card p-0 row-span-2">
               <VideoFeed
                 detections={detections}
@@ -243,19 +280,60 @@ const Dashboard = ({ sessionId: initialSessionId = null, onSessionChange = null 
               />
             </div>
 
-            {/* Top-right: Metrics Panel */}
+            {/* Col 2 top: Metrics */}
             <div className="min-h-0 card p-4 overflow-y-auto">
               <MetricsPanel metrics={metrics} history={metricsHistory} />
             </div>
 
-            {/* Bottom-left: Chat Panel */}
-            <div className="min-h-0 card p-0">
-              <ChatPanel sessionId={sessionId} disabled={!isConnected} />
+            {/* Col 3 top: Watchlist OR Incidents (togglable) */}
+            <div className="min-h-0 flex flex-col gap-2">
+              <div className="flex items-center gap-1 text-xs">
+                <button
+                  onClick={() => setSceneSidebar('scene')}
+                  className={`px-2.5 py-1 rounded font-mono tracking-wide transition-colors ${
+                    sceneSidebar === 'scene'
+                      ? 'bg-cyan-700 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  watchlist
+                </button>
+                <button
+                  onClick={() => setSceneSidebar('legacy')}
+                  className={`px-2.5 py-1 rounded font-mono tracking-wide transition-colors ${
+                    sceneSidebar === 'legacy'
+                      ? 'bg-cyan-700 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  incidents
+                </button>
+              </div>
+              <div className="flex-1 min-h-0">
+                {sceneSidebar === 'scene' ? (
+                  <WatchlistPanel sessionId={sessionId} disabled={!isConnected} />
+                ) : (
+                  <div className="h-full card p-0">
+                    <IncidentLog incidents={incidents} />
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Bottom-right: Incident Log */}
-            <div className="min-h-0 card p-0">
-              <IncidentLog incidents={incidents} />
+            {/* Col 2 bottom: Live Transcript */}
+            <div className="min-h-0">
+              <LiveTranscript captions={captions} />
+            </div>
+
+            {/* Col 3 bottom: Alert History OR Chat */}
+            <div className="min-h-0">
+              {sceneSidebar === 'scene' ? (
+                <AlertHistoryPanel sessionId={sessionId} liveAlerts={alerts} />
+              ) : (
+                <div className="h-full card p-0">
+                  <ChatPanel sessionId={sessionId} disabled={!isConnected} />
+                </div>
+              )}
             </div>
           </div>
         ) : (

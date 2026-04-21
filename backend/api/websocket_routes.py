@@ -396,3 +396,14 @@ async def broadcast_status(session_id: str, status_update: Dict) -> None:
         status_update: Status data dictionary
     """
     await manager.broadcast_status(session_id, status_update)
+
+
+# ----- Scene Intelligence channels -------------------------------------
+async def broadcast_caption(session_id: str, caption: Dict) -> None:
+    """Broadcast a live VLM scene caption to all clients of a session."""
+    await manager.broadcast_status(session_id, {"type": "caption", "data": caption})
+
+
+async def broadcast_alert(session_id: str, alert: Dict) -> None:
+    """Broadcast a watchlist alert to all clients of a session."""
+    await manager.broadcast_status(session_id, {"type": "alert", "data": alert})

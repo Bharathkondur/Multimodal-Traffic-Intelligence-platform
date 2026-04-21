@@ -65,7 +65,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
     command: bash -c "pip install -e . && python -m watchdog app"
     networks:
-      - traffic-net
+      - scene-intel-net
 
   # Redis Commander for debugging
   redis-commander:
@@ -77,7 +77,7 @@ services:
     depends_on:
       - redis
     networks:
-      - traffic-net
+      - scene-intel-net
 
   # pgAdmin for database management
   pgadmin:
@@ -93,7 +93,7 @@ services:
     depends_on:
       - postgres
     networks:
-      - traffic-net
+      - scene-intel-net
     volumes:
       - pgadmin-data:/var/lib/pgadmin
 

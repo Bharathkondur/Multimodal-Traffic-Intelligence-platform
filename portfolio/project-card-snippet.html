@@ -1,0 +1,133 @@
+<!--
+  Drop this into the projects grid on https://bharathkondur.github.io/ (index.html)
+  as the 4th .proj-card, alongside Self-Correcting RAG, Energy LLM, TrackStreak.
+
+  Class names and structure are intentionally identical to the existing cards
+  so it inherits all the hover animation, clip-path, and gradient styles.
+
+  If your current portfolio uses slightly different class names, rename:
+    .proj-card    → your card container class
+    .proj-title   → your card title class
+    .proj-desc    → your card description class
+    .proj-chips   → your tech chip row class
+    .proj-link    → your CTA link class
+
+  Path assumption:
+    Place the project page at: /projects/multimodal-traffic-intelligence.html
+    Relative to index.html.    ↑ adjust href below if your folder differs.
+-->
+
+<article class="proj-card" data-project="multimodal-traffic">
+  <div class="proj-num">04</div>
+  <h3 class="proj-title">
+    Multimodal Scene <span class="accent">Intelligence</span> Platform
+  </h3>
+  <p class="proj-desc">
+    Real-time 80-class detection, pose-based action recognition, live VLM scene
+    narration, and natural-language watchlist rules over any RTSP / YouTube /
+    HTTP / uploaded video. Async pipeline, Gemini Vision narration every 2 s.
+  </p>
+  <div class="proj-chips">
+    <span class="chip">YOLO26</span>
+    <span class="chip">Pose</span>
+    <span class="chip">DeepSORT</span>
+    <span class="chip">Gemini Vision</span>
+    <span class="chip">FastAPI</span>
+    <span class="chip">WebSocket</span>
+    <span class="chip">Rule Engine</span>
+    <span class="chip">PostgreSQL</span>
+    <span class="chip">Docker</span>
+  </div>
+  <div class="proj-meta">
+    <span class="proj-status live">
+      <span class="status-dot"></span>
+      Live · v1
+    </span>
+    <span class="proj-year">2026</span>
+  </div>
+  <div class="proj-actions">
+    <a href="projects/multimodal-traffic-intelligence.html" class="proj-link">
+      View project →
+    </a>
+    <a href="https://github.com/Bharathkondur/Multimodal-Traffic-Intelligence-platform"
+       target="_blank" rel="noopener" class="proj-link-secondary">
+      GitHub ↗
+    </a>
+  </div>
+</article>
+
+<!--
+  Supporting CSS — add to your existing stylesheet ONLY if these classes
+  don't already exist on your portfolio. (Most likely .proj-card, .proj-title,
+  .proj-desc, .proj-chips and .chip already do, so you can drop them here.)
+-->
+<style>
+  /* minimal additions — keep only what your site is missing */
+
+  .proj-num {
+    font-family: 'Space Mono', ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--cyan, #00d4ff);
+    letter-spacing: 0.15em;
+    margin-bottom: 14px;
+  }
+
+  .proj-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0 16px;
+    font-family: 'Space Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .proj-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted, #7a8799);
+  }
+  .proj-status.live { color: #3ddc84; }
+  .status-dot {
+    width: 6px; height: 6px;
+    background: #3ddc84;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #3ddc84;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+  }
+  .proj-year { color: var(--muted, #7a8799); }
+
+  .proj-actions {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .proj-link,
+  .proj-link-secondary {
+    font-family: 'Space Mono', ui-monospace, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .proj-link {
+    color: var(--cyan, #00d4ff);
+  }
+  .proj-link:hover {
+    color: #fff;
+  }
+  .proj-link-secondary {
+    color: var(--muted, #7a8799);
+  }
+  .proj-link-secondary:hover {
+    color: var(--cyan, #00d4ff);
+  }
+</style>

@@ -61,6 +61,15 @@ export const useWebSocket = (sessionId, onMessage, options = {}) => {
             if (onMessage) {
               onMessage({ type: 'heatmap', data: message.data })
             }
+          } else if (
+            message.type === 'status' &&
+            message.data &&
+            (message.data.type === 'caption' || message.data.type === 'alert')
+          ) {
+            // Scene Intelligence: captions + alerts are nested under status
+            if (onMessage) {
+              onMessage({ type: message.data.type, data: message.data.data })
+            }
           } else {
             // Generic message handling for other channels
             if (onMessage) {

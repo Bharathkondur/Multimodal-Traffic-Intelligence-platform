@@ -81,7 +81,17 @@ async def start_detection_pipeline(
 
         # Import database
         from database.connection import AsyncSessionFactory
-        from api.websocket_routes import broadcast_detection, broadcast_incident, broadcast_metrics
+        from api.websocket_routes import (
+            broadcast_detection,
+            broadcast_incident,
+            broadcast_metrics,
+        )
+
+        # Scene Intelligence: pose, captioning, monitor engine, alert persistence
+        from detection.pose import PoseEstimator, PoseActionClassifier
+        from processing.captioner import build_captioner
+        from processing.monitors import MonitorEngine, seed_demo_rules
+        from database.models import Alert as AlertRow
 
         # Load YOLOv8 model
         logger.debug(f"Loading YOLOv8 model from {settings.model_path}")
@@ -119,6 +129,46 @@ async def start_detection_pipeline(
             pool_size=5,
         )
 
+        # --- Scene Intelligence plumbing --------------------------------
+        pose_estimator = None
+        pose_classifier = None
+        if getattr(settings, "pose_enabled", True):
+            try:
+                pose_estimator = PoseEstimator(
+                    model_path=getattr(
+                        settings, "yolo_pose_model_path", "yolo26s-pose.pt"
+                    )
+                )
+                pose_classifier = PoseActionClassifier()
+            except Exception as e:
+                logger.warning(f"Pose disabled ({e})")
+
+        captioner = None
+        try:
+            captioner = build_captioner(settings)
+        except Exception as e:
+            logger.warning(f"Captioner unavailable ({e})")
+
+        # Use the shared app-level MonitorEngine if FastAPI is running,
+        # else create a local one (e.g. for batch/CLI processing).
+        monitor_engine: MonitorEngine
+        try:
+            from main import app as _fastapi_app  # type: ignore
+            monitor_engine = getattr(
+                _fastapi_app.state, "monitor_engine", None
+            ) or MonitorEngine()
+        except Exception:
+            monitor_engine = MonitorEngine()
+
+        # Seed demo rules on startup so first-run users see alerts working.
+        try:
+            seed_demo_rules(monitor_engine, session_id)
+        except Exception as e:
+            logger.debug(f"Demo rule seeding skipped: {e}")
+
+        # Caption + alert broadcast helpers (added in this milestone).
+        from api.websocket_routes import broadcast_caption, broadcast_alert
+
         # Broadcast callbacks
         async def on_detection(frame_data, detections, frame_b64=None):
             payload = {
@@ -137,6 +187,36 @@ async def start_detection_pipeline(
 
         async def on_metrics(metrics):
             await broadcast_metrics(session_id, metrics)
+
+        async def on_caption(caption):
+            try:
+                await broadcast_caption(session_id, caption)
+            except Exception as e:
+                logger.debug(f"Caption broadcast error: {e}")
+
+        async def on_alert(alert):
+            # Broadcast first (UX latency > DB durability for demos).
+            try:
+                await broadcast_alert(session_id, alert)
+            except Exception as e:
+                logger.debug(f"Alert broadcast error: {e}")
+            # Persist
+            try:
+                async with db_factory.session_context() as db:
+                    db.add(AlertRow(
+                        id=alert.get("alert_id"),
+                        session_id=session_id,
+                        rule_id=alert.get("rule_id"),
+                        rule_name=alert.get("rule_name") or "Unnamed rule",
+                        severity=alert.get("severity") or "info",
+                        reason=alert.get("reason"),
+                        zone_id=alert.get("zone_id"),
+                        frame_id=alert.get("frame_id"),
+                        matched_objects=alert.get("matched_objects"),
+                        snapshot_b64=alert.get("snapshot_b64"),
+                    ))
+            except Exception as e:
+                logger.debug(f"Alert persist error: {e}")
 
         # Determine compute device for GPU acceleration
         import torch
@@ -159,7 +239,7 @@ async def start_detection_pipeline(
         logger.info("Waiting 2 s for WebSocket clients to connect...")
         await asyncio.sleep(2.0)
 
-        # Create stream processor
+        # Create stream processor (Scene Intelligence: pose + captioner + monitor wired)
         processor = StreamProcessor(
             stream_source=stream_source,
             config=processing_config,
@@ -168,7 +248,14 @@ async def start_detection_pipeline(
             on_detection=on_detection,
             on_incident=on_incident,
             on_metrics=on_metrics,
+            on_caption=on_caption,
+            on_alert=on_alert,
             ocr_reader=ocr_reader,
+            pose_estimator=pose_estimator,
+            pose_classifier=pose_classifier,
+            pose_frame_interval=getattr(settings, "pose_frame_interval", 3),
+            captioner=captioner,
+            monitor=monitor_engine,
         )
 
         # Process video frames
